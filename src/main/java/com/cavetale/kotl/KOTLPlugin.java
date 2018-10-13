@@ -519,7 +519,6 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        System.out.println(event.getEventName());
         if (game.state != State.CLIMB) return;
         Block block = event.getClickedBlock();
         if (block == null) return;
@@ -529,7 +528,6 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGHEST)
     public void onBlockDamage(BlockDamageEvent event) {
-        System.out.println(event.getEventName());
         if (game.state != State.CLIMB) return;
         Block block = event.getBlock();
         if (!block.getWorld().getName().equals(game.world)) return;
@@ -547,7 +545,6 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGHEST)
     public void onBlockBreak(BlockBreakEvent event) {
-        System.out.println(event.getEventName());
         if (game.state != State.CLIMB) return;
         Block block = event.getBlock();
         if (!block.getWorld().getName().equals(game.world)) return;
