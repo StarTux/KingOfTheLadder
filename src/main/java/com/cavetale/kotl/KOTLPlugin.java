@@ -456,7 +456,9 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         objective = scoreboard.registerNewObjective("kotl", "dummy", ChatColor.GOLD + "KOTL");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         for (Map.Entry<UUID, Integer> entry: game.playerLevels.entrySet()) {
-            objective.getScore(GenericEvents.cachedPlayerName(entry.getKey())).setScore(entry.getValue());
+            String name = GenericEvents.cachedPlayerName(entry.getKey());
+            if (name == null) continue;
+            objective.getScore(name).setScore(entry.getValue());
         }
     }
 
