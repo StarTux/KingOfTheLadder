@@ -19,6 +19,8 @@ import lombok.Value;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.Color;
+import org.bukkit.FireworkEffect;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -28,6 +30,7 @@ import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -39,6 +42,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.permissions.PermissionDefault;
@@ -57,6 +61,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.util.Vector;
 
 @Plugin(name = "KingOfTheLadder", version = "0.1")
 @Description("King of the Ladder Event")
@@ -190,7 +195,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 return true;
             }
             try {
-                game.goalMaterial = Material.valueOf(args[1]);
+                game.goalMaterial = Material.valueOf(args[1].toUpperCase());
             } catch (IllegalArgumentException iae) {
                 sender.sendMessage(ChatColor.RED + "Unknown material: " + args[1]);
                 return true;
@@ -574,11 +579,24 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             player.sendMessage(ChatColor.GOLD + winner.getName() + " wins King of the Ladder level " + level + "!");
             player.playSound(player.getEyeLocation(), Sound.ENTITY_WITHER_DEATH, SoundCategory.MASTER, 0.5f, 1.0f);
         }
+        Firework firework = block.getWorld().spawn(block.getLocation().add(0.5, 0.5, 0.5), Firework.class, (fw) -> {
+                FireworkMeta meta = fw.getFireworkMeta();
+                for (int i = 0; i <= level; i += 1) {
+                    Vector cv = new Vector(Math.random(), Math.random(), Math.random()).normalize();
+                    meta.addEffect(FireworkEffect.builder()
+                                   .with(FireworkEffect.Type.BALL)
+                                   .withColor(Color.fromRGB((int)(cv.getX() * 255.0),
+                                                            (int)(cv.getY() * 255.0),
+                                                            (int)(cv.getZ() * 255.0)))
+                                   .build());
+                }
+                fw.setFireworkMeta(meta);
+            });
+        firework.detonate();
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
     public void onPlayerRespawn(PlayerRespawnEvent event) {
-        if (game.state != State.CLIMB) return;
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
         if (!hasMeta(player, META_AREA)) return;
