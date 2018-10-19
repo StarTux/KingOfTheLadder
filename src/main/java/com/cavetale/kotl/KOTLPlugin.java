@@ -18,9 +18,6 @@ import lombok.Data;
 import lombok.Value;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -40,6 +37,7 @@ import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
@@ -91,10 +89,11 @@ import org.bukkit.scoreboard.Scoreboard;
                          desc = "Use /kotl",
                          defaultValue = PermissionDefault.OP))
 public final class KOTLPlugin extends JavaPlugin implements Listener {
-    private final String META_AREA = "kotl.area";
+    private static final String META_AREA = "kotl.area";
     private Game game;
     private Scoreboard scoreboard;
     private Objective objective;
+    private transient int spawnHeight;
 
     // --- Java Plugin
 
@@ -193,7 +192,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             try {
                 game.goalMaterial = Material.valueOf(args[1]);
             } catch (IllegalArgumentException iae) {
-                sender.sendMessage(ChatColor.RED + "Unknown material: " + game.goalMaterial);
+                sender.sendMessage(ChatColor.RED + "Unknown material: " + args[1]);
                 return true;
             }
             saveGame();
@@ -259,11 +258,11 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     // --- Player Utility
 
-    boolean spawnPlayer(Player player) {
+    Location randomSpawnLocation(Player player) {
         World world = getServer().getWorld(game.world);
-        if (world == null) return false;
+        if (world == null) return null;
         Location playerLocation = player.getLocation();
-        if (game.spawnBlocks.isEmpty()) return false;
+        if (game.spawnBlocks.isEmpty()) return null;
         Vec spawnBlock = new ArrayList<>(game.spawnBlocks).get(ThreadLocalRandom.current().nextInt(game.spawnBlocks.size()));
         Location location = world
             .getBlockAt(spawnBlock.x, spawnBlock.y, spawnBlock.z)
@@ -271,8 +270,13 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             .add(0.5, 0.0, 0.5);
         location.setPitch(playerLocation.getPitch());
         location.setYaw(playerLocation.getYaw());
-        player.teleport(location);
-        return true;
+        return location;
+    }
+
+    boolean spawnPlayer(Player player) {
+        Location location = randomSpawnLocation(player);
+        if (location == null) return false;
+        return player.teleport(location);
     }
 
     boolean playerCarriesItem(Player player) {
@@ -336,8 +340,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     enum State {
         PAUSE, // Nothing's happening
-        CLIMB, // Climb and PVP
-        ;
+        CLIMB; // Climb and PVP
     }
 
     void setupState(State state) {
@@ -364,17 +367,15 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 return;
             }
             Block goalBlock = world.getBlockAt(game.goalBlock.x, game.goalBlock.y, game.goalBlock.z);
-            if (goalBlock.isEmpty()) goalBlock.setType(game.goalMaterial);
+            goalBlock.setType(game.goalMaterial);
             for (final Player player: world.getPlayers()) {
+                if (player.isOp()) continue;
                 if (!game.area.contains(player.getLocation())) continue;
+                spawnPlayer(player);
                 player.sendTitle("" + ChatColor.GOLD + ChatColor.ITALIC + "GO!",
                                  "" + ChatColor.GOLD + "King of the Ladder",
                                  0, 20, 60);
                 player.playSound(player.getEyeLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, SoundCategory.MASTER, 1.0f, 1.0f);
-                getServer().getScheduler().runTaskLater(this, () -> {
-                        if (!player.isValid()) return;
-                        spawnPlayer(player);
-                    }, 20L);
             }
             break;
         }
@@ -448,6 +449,10 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             game.winners = new ArrayList<>();
             game.playerLevels = new HashMap<>();
         }
+        spawnHeight = 0;
+        for (Vec spawnBlock: game.spawnBlocks) {
+            spawnHeight = Math.max(spawnHeight, spawnBlock.y);
+        }
         setupScores();
     }
 
@@ -482,7 +487,8 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         if (player.getWorld().getName().equals(game.world)
             && game.area.contains(player.getLocation())) {
             if (hasMeta(player, META_AREA)) {
-                if (!player.isOp() && game.state == State.CLIMB && playerCarriesItem(player)) {
+                Location loc = player.getLocation();
+                if (!player.isOp() && game.state == State.CLIMB && loc.getBlockY() > spawnHeight + 1 && playerCarriesItem(player)) {
                     spawnPlayer(player);
                     player.sendMessage("" + ChatColor.RED + ChatColor.ITALIC + "You cannot wear or hold any items in KOTL!");
                 }
@@ -512,6 +518,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         if (!(event.getEntity() instanceof Player)) return;
         Player player = (Player)event.getEntity();
         if (!player.getWorld().getName().equals(game.world)) return;
+        if (!hasMeta(player, META_AREA)) return;
         if (!(event.getDamager() instanceof Player)) return;
         Player damager = (Player)event.getDamager();
         if (!game.area.contains(player.getLocation())) return;
@@ -521,10 +528,11 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (game.state != State.CLIMB) return;
         Block block = event.getClickedBlock();
         if (block == null) return;
         if (!block.getWorld().getName().equals(game.world)) return;
+        Player player = event.getPlayer();
+        if (!hasMeta(player, META_AREA)) return;
         event.setCancelled(false);
     }
 
@@ -536,10 +544,9 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         if (!game.goalBlock.isBlock(block)) return;
         Player player = event.getPlayer();
         int level = getPlayerLevel(player);
-        if (level == 0) return;
         if (level > 5) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_DIGGING, 20 * level, 1));
-        } else {
+        } else if (level > 0) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_DIGGING, 20 * level, 0));
         }
         event.setCancelled(false);
@@ -564,8 +571,17 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             player.sendTitle(ChatColor.GOLD + winner.getName(),
                              ChatColor.GOLD + "Wins King of the Ladder level " + level + "!",
                              0, 20, 60);
-            player.sendMessage(ChatColor.GOLD + player.getName() + " wins King of the Ladder level " + level + "!");
+            player.sendMessage(ChatColor.GOLD + winner.getName() + " wins King of the Ladder level " + level + "!");
             player.playSound(player.getEyeLocation(), Sound.ENTITY_WITHER_DEATH, SoundCategory.MASTER, 0.5f, 1.0f);
         }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        if (game.state != State.CLIMB) return;
+        Player player = event.getPlayer();
+        if (!player.getWorld().getName().equals(game.world)) return;
+        if (!hasMeta(player, META_AREA)) return;
+        event.setRespawnLocation(randomSpawnLocation(player));
     }
 }
