@@ -500,18 +500,12 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             } else {
                 player.setMetadata(META_AREA, new FixedMetadataValue(this, true));
                 player.setScoreboard(scoreboard);
-                if (!player.isOp()) {
-                    player.setGameMode(GameMode.SURVIVAL);
-                }
                 player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText("Entering King of the Ladder"));
             }
         } else {
             if (hasMeta(player, META_AREA)) {
                 player.removeMetadata(META_AREA, this);
                 player.setScoreboard(getServer().getScoreboardManager().getMainScoreboard());
-                if (!player.isOp()) {
-                    player.setGameMode(GameMode.ADVENTURE);
-                }
                 player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText("Leaving King of the Ladder"));
             }
         }
