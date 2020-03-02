@@ -21,7 +21,6 @@ import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -45,17 +44,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
-import org.bukkit.permissions.PermissionDefault;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.plugin.java.annotation.command.Command;
-import org.bukkit.plugin.java.annotation.command.Commands;
-import org.bukkit.plugin.java.annotation.permission.Permission;
-import org.bukkit.plugin.java.annotation.permission.Permissions;
-import org.bukkit.plugin.java.annotation.plugin.ApiVersion;
-import org.bukkit.plugin.java.annotation.plugin.Description;
-import org.bukkit.plugin.java.annotation.plugin.Plugin;
-import org.bukkit.plugin.java.annotation.plugin.Website;
-import org.bukkit.plugin.java.annotation.plugin.author.Author;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.DisplaySlot;
@@ -63,36 +52,6 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.util.Vector;
 
-@Plugin(name = "KingOfTheLadder", version = "0.1")
-@Description("King of the Ladder Event")
-@ApiVersion(ApiVersion.Target.v1_13)
-@Author("StarTux")
-@Website("https://cavetale.com")
-@Commands({@Command(name = "kotl",
-                   desc = "King of the Ladder Warp",
-                   aliases = {},
-                   permission = "kotl.kotl",
-                   usage = "/<command>"),
-          @Command(name = "kotla",
-                   desc = "King of the Ladder Admin interface",
-                   aliases = {},
-                   permission = "kotl.admin",
-                   usage = "/<command>"
-                   + "\n/kotla reload - Reload game"
-                   + "\n/kotla save - Save game - Should not be needed"
-                   + "\n/kotla setstate PAUSE|CLIMB"
-                   + "\n/kotla setarea - Set area"
-                   + "\n/kotla setgoal - Set goal block under feet"
-                   + "\n/kotla setgoalmaterial <mat> - Set goal material"
-                   + "\n/kotla addspawn - Add spawn block under feet"
-                   + "\n/kotla clearspawn - Clear spawn blocks"
-                   + "\n/kotla clearwinners - Clear winners"
-                   + "\n/kotla setlevel <name> <lvl> - Set player level"
-                   + "\n/kotla clearlevels - Clear player levels"
-          )})
-@Permissions(@Permission(name = "kotl.kotl",
-                         desc = "Use /kotl",
-                         defaultValue = PermissionDefault.OP))
 public final class KOTLPlugin extends JavaPlugin implements Listener {
     private static final String META_AREA = "kotl.area";
     private Game game;
@@ -122,7 +81,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     public boolean onGameCommand(CommandSender sender, String[] args) {
         if (args.length != 0) return false;
         if (!(sender instanceof Player)) return false;
-        Player player = (Player)sender;
+        Player player = (Player) sender;
         spawnPlayer(player);
         return true;
     }
@@ -132,7 +91,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             sender.sendMessage(game.toString());
             return false;
         }
-        Player player = sender instanceof Player ? (Player)sender : null;
+        Player player = sender instanceof Player ? (Player) sender : null;
         String cmd = args[0];
         switch (args[0]) {
         case "reload": {
@@ -515,11 +474,11 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (game.state != State.CLIMB) return;
         if (!(event.getEntity() instanceof Player)) return;
-        Player player = (Player)event.getEntity();
+        Player player = (Player) event.getEntity();
         if (!player.getWorld().getName().equals(game.world)) return;
         if (!hasMeta(player, META_AREA)) return;
         if (!(event.getDamager() instanceof Player)) return;
-        Player damager = (Player)event.getDamager();
+        Player damager = (Player) event.getDamager();
         if (!game.area.contains(player.getLocation())) return;
         if (!game.area.contains(damager.getLocation())) return;
         event.setCancelled(false);
@@ -579,9 +538,9 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                     Vector cv = new Vector(Math.random(), Math.random(), Math.random()).normalize();
                     meta.addEffect(FireworkEffect.builder()
                                    .with(FireworkEffect.Type.BALL)
-                                   .withColor(Color.fromRGB((int)(cv.getX() * 255.0),
-                                                            (int)(cv.getY() * 255.0),
-                                                            (int)(cv.getZ() * 255.0)))
+                                   .withColor(Color.fromRGB((int) (cv.getX() * 255.0),
+                                                            (int) (cv.getY() * 255.0),
+                                                            (int) (cv.getZ() * 255.0)))
                                    .build());
                 }
                 fw.setFireworkMeta(meta);
