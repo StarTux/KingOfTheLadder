@@ -21,6 +21,7 @@ import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -40,6 +41,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -448,13 +450,19 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
-        if (player.getWorld().getName().equals(game.world)
-            && game.area.contains(player.getLocation())) {
+        if (player.isOp() || player.getGameMode() == GameMode.SPECTATOR) return;
+        if (player.getWorld().getName().equals(game.world) && game.area.contains(player.getLocation())) {
             if (hasMeta(player, META_AREA)) {
                 Location loc = player.getLocation();
-                if (!player.isOp() && game.state == State.CLIMB && loc.getBlockY() > spawnHeight + 1 && playerCarriesItem(player)) {
-                    spawnPlayer(player);
-                    player.sendMessage("" + ChatColor.RED + ChatColor.ITALIC + "You cannot wear or hold any items in KOTL!");
+                if (game.state == State.CLIMB) {
+                    if (loc.getBlockY() > spawnHeight + 1 && playerCarriesItem(player)) {
+                        spawnPlayer(player);
+                        player.sendMessage("" + ChatColor.RED + ChatColor.ITALIC + "You cannot wear or hold any items in KOTL!");
+                    } else if (player.isGliding()) {
+                        player.setGliding(false);
+                        spawnPlayer(player);
+                        player.sendMessage("" + ChatColor.RED + ChatColor.ITALIC + "You cannot fly in KOTL!");
+                    }
                 }
             } else {
                 player.setMetadata(META_AREA, new FixedMetadataValue(this, true));
@@ -466,6 +474,22 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 player.removeMetadata(META_AREA, this);
                 player.setScoreboard(getServer().getScoreboardManager().getMainScoreboard());
                 player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText("Leaving King of the Ladder"));
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerTeleport(PlayerTeleportEvent event) {
+        Player player = event.getPlayer();
+        if (player.isOp() || player.getGameMode() == GameMode.SPECTATOR) return;
+        Location to = event.getTo();
+        if (to.getWorld().getName().equals(game.world) && game.area.contains(to)) {
+            switch (event.getCause()) {
+            case ENDER_PEARL:
+            case CHORUS_FRUIT:
+                event.setCancelled(true);
+                spawnPlayer(player);
+                player.sendMessage("" + ChatColor.RED + ChatColor.ITALIC + "You cannot ender warp in KOTL!");
             }
         }
     }
