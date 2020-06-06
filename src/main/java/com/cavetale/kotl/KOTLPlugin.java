@@ -162,6 +162,11 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 return true;
             }
             saveGame();
+            World world = getServer().getWorld(game.world);
+            if (world != null) {
+                Block goalBlock = world.getBlockAt(game.goalBlock.x, game.goalBlock.y, game.goalBlock.z);
+                goalBlock.setType(game.goalMaterial);
+            }
             sender.sendMessage(ChatColor.YELLOW + "Goal material set to " + game.goalMaterial);
             return true;
         }
