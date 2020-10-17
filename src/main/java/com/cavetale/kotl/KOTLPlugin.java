@@ -420,11 +420,15 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             game.winners = new ArrayList<>();
             game.playerLevels = new HashMap<>();
         }
+        recalculateSpawnHeight();
+        setupScores();
+    }
+
+    void recalculateSpawnHeight() {
         spawnHeight = 0;
         for (Vec spawnBlock: game.spawnBlocks) {
             spawnHeight = Math.max(spawnHeight, spawnBlock.y);
         }
-        setupScores();
     }
 
     void setupScores() {
@@ -456,6 +460,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
         if (player.isOp() || player.getGameMode() == GameMode.SPECTATOR) return;
+        recalculateSpawnHeight();
         if (player.getWorld().getName().equals(game.world) && game.area.contains(player.getLocation())) {
             if (hasMeta(player, META_AREA)) {
                 Location loc = player.getLocation();
