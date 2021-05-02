@@ -52,6 +52,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
+import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 public final class KOTLPlugin extends JavaPlugin implements Listener {
     private Game game;
@@ -192,6 +193,18 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     // --- Player Utility
+
+    Location randomSpawnLocation() {
+        World world = getServer().getWorld(game.world);
+        if (world == null) return null;
+        if (game.spawnBlocks.isEmpty()) return null;
+        Vec spawnBlock = new ArrayList<>(game.spawnBlocks).get(ThreadLocalRandom.current().nextInt(game.spawnBlocks.size()));
+        Location location = world
+            .getBlockAt(spawnBlock.x, spawnBlock.y, spawnBlock.z)
+            .getLocation()
+            .add(0.5, 0.0, 0.5);
+        return location;
+    }
 
     Location randomSpawnLocation(Player player) {
         World world = getServer().getWorld(game.world);
@@ -412,6 +425,18 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         if (!entity.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(entity.getLocation())) return;
         event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onPlayerSpawnLocation(PlayerSpawnLocationEvent event) {
+        if (game.state != State.CLIMB) return;
+        Location spawnLocation = event.getSpawnLocation();
+        if (game.goal.contains(spawnLocation) && spawnLocation.getWorld().getName().equals(game.world)) {
+            Location location = randomSpawnLocation();
+            if (location != null) {
+                event.setSpawnLocation(location);
+            }
+        }
     }
 
     public void win(Player winner, int score) {
