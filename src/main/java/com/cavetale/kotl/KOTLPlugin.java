@@ -271,8 +271,8 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 getServer().broadcast("[KOTL] World not found: " + game.world, "kotl.admin");
                 return;
             }
-            for (final Player player: world.getPlayers()) {
-                if (player.isOp()) continue;
+            for (final Player player : world.getPlayers()) {
+                if (player.isOp() || player.getGameMode() == GameMode.SPECTATOR) continue;
                 if (!game.area.contains(player.getLocation())) continue;
                 spawnPlayer(player);
                 player.sendTitle("" + ChatColor.GOLD + ChatColor.ITALIC + "GO!",
