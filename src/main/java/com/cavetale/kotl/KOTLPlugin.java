@@ -505,7 +505,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         if (game.goal.contains(player.getLocation())) {
             lines.add(Component.text("Stay in the goal!").color(TextColor.color(0xFFFF00)).decorate(TextDecoration.BOLD));
         }
-        event.add(this, Priority.DEFAULT, lines);
+        event.add(this, Priority.HIGH, lines);
     }
 
     public World getWorld() {
