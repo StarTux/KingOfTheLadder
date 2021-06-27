@@ -413,6 +413,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     void onPlayerDropItem(PlayerDropItemEvent event) {
+        if (game.state != State.CLIMB) return;
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(player.getLocation())) return;
