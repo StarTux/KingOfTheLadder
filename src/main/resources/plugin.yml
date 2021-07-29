@@ -1,11 +1,11 @@
 main: com.cavetale.kotl.KOTLPlugin
 name: KingOfTheLadder
 version: '0.1'
-api-version: '1.13'
+api-version: '1.17'
 description: King of the Ladder Event
 author: StarTux
 website: https://github.com/StarTux/KingOfTheLadder
-depend: [GenericEvents, WorldGuard, Sidebar]
+depend: [WorldEdit, Sidebar]
 softdepend: []
 commands:
   kotl:
