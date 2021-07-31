@@ -98,10 +98,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     public boolean onAdminCommand(CommandSender sender, String[] args) {
-        if (args.length == 0) {
-            sender.sendMessage(game.toString());
-            return false;
-        }
+        if (args.length == 0) return false;
         Player player = sender instanceof Player ? (Player) sender : null;
         String cmd = args[0];
         switch (args[0]) {
