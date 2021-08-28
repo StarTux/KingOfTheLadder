@@ -451,7 +451,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             player.sendTitle(ChatColor.GOLD + winner.getName(),
                              ChatColor.GOLD + "Wins King of the Ladder!",
                              0, 20, 60);
-            player.sendMessage("\n" + ChatColor.GOLD + winner.getName() + " wins King of the Ladder!\n");
+            player.sendMessage("\n" + ChatColor.GOLD + winner.getName() + " wins King of the Ladder!\n\n");
             player.playSound(player.getEyeLocation(), Sound.ENTITY_WITHER_DEATH, SoundCategory.MASTER, 0.5f, 1.0f);
         }
         Firework firework = getWorld().spawn(winner.getLocation().add(0, 3.0, 0.0), Firework.class, (fw) -> {
