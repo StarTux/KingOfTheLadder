@@ -21,9 +21,8 @@ commands:
       /kotla save - Save game - Should not be needed
       /kotla setstate PAUSE|CLIMB
       /kotla setarea - Set area
-      /kotla setgoal - Set goal block under feet
-      /kotla setgoalmaterial <mat> - Set goal material
-      /kotla addspawn - Add spawn block under feet
+      /kotla setgoal - Set goal area
+      /kotla addspawn - Add spawn blocks from selection
       /kotla clearspawn - Clear spawn blocks
       /kotla clearwinners - Clear winners
       /kotla setlevel <name> <lvl> - Set player level

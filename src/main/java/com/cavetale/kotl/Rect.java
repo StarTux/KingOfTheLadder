@@ -1,5 +1,7 @@
 package com.cavetale.kotl;
 
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Value;
 import org.bukkit.Location;
 
@@ -27,5 +29,18 @@ public final class Rect {
     @Override
     public String toString() {
         return a + "-" + b;
+    }
+
+    public List<Vec> allVecs() {
+        List<Vec> result = new ArrayList<>();
+        for (int y = a.y; y <= b.y; y += 1) {
+            for (int z = a.z; y <= b.z; z += 1) {
+                for (int x = a.x; y <= b.x; x += 1) {
+                    result.add(Vec.v(x, y, z));
+                    if (result.size() > 1000) break;
+                }
+            }
+        }
+        return result;
     }
 }

@@ -30,7 +30,6 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
@@ -164,18 +163,23 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 sender.sendMessage("[KOTL] Player expected");
                 return true;
             }
-            Block block = player.getLocation().getBlock();
-            Vec spawnBlock = Vec.v(block.getX(), block.getY(), block.getZ());
-            game.spawnBlocks.add(spawnBlock);
+            Rect sel = getSelection(player);
+            if (sel == null) {
+                sender.sendMessage(ChatColor.RED + "No selection!");
+                return true;
+            }
+            List<Vec> vecs = sel.allVecs();
+            game.spawnBlocks.addAll(vecs);
             saveGame();
-            sender.sendMessage(ChatColor.YELLOW + "Spawn block added: " + spawnBlock);
+            sender.sendMessage("" + ChatColor.YELLOW + vecs.size() + " spawn blocks added");
             return true;
         }
         case "clearspawn": {
             if (args.length != 1) return false;
+            int count = game.spawnBlocks.size();
             game.spawnBlocks.clear();
             saveGame();
-            sender.sendMessage(ChatColor.YELLOW + "Spawn blocks cleared");
+            sender.sendMessage("" + ChatColor.YELLOW + count + " spawn blocks cleared");
             return true;
         }
         case "clearwinners": {
