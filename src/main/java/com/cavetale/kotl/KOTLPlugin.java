@@ -44,6 +44,7 @@ import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerRiptideEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -507,6 +508,15 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             lines.add(Component.text("Stay in the goal!").color(TextColor.color(0xFFFF00)).decorate(TextDecoration.BOLD));
         }
         event.add(this, Priority.HIGH, lines);
+    }
+
+    @EventHandler
+    void onPlayerRiptide(PlayerRiptideEvent event) {
+        if (game.state != State.CLIMB) return;
+        Player player = event.getPlayer();
+        if (!player.getWorld().getName().equals(game.world) || !game.area.contains(player.getLocation())) return;
+        player.sendMessage(ChatColor.RED + "Riptide is not allowed in King of the Ladder!");
+        spawnPlayer(player);
     }
 
     public World getWorld() {
