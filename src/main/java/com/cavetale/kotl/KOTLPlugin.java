@@ -446,12 +446,12 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         game.winners.add(winner.getUniqueId());
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.getName() + " Climber LadderKing KingOfTheLadder QueenOfTheLadder VineClimber Ladder");
         World world = getWorld();
-        for (Player player: getWorld().getPlayers()) {
+        for (Player player : getWorld().getPlayers()) {
             if (!game.area.contains(player.getLocation())) continue;
             player.sendTitle(ChatColor.GOLD + winner.getName(),
                              ChatColor.GOLD + "Wins King of the Ladder!",
                              0, 20, 60);
-            player.sendMessage(ChatColor.GOLD + winner.getName() + " wins King of the Ladder!");
+            player.sendMessage("\n" + ChatColor.GOLD + winner.getName() + " wins King of the Ladder!\n");
             player.playSound(player.getEyeLocation(), Sound.ENTITY_WITHER_DEATH, SoundCategory.MASTER, 0.5f, 1.0f);
         }
         Firework firework = getWorld().spawn(winner.getLocation().add(0, 3.0, 0.0), Firework.class, (fw) -> {
