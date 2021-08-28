@@ -33,11 +33,11 @@ public final class Rect {
 
     public List<Vec> allVecs() {
         List<Vec> result = new ArrayList<>();
-        for (int y = a.y; y <= b.y; y += 1) {
-            for (int z = a.z; y <= b.z; z += 1) {
+        OUTER: for (int y = a.y; y <= b.y; y += 1) {
+            for (int z = a.z; z <= b.z; z += 1) {
                 for (int x = a.x; y <= b.x; x += 1) {
                     result.add(Vec.v(x, y, z));
-                    if (result.size() > 1000) break;
+                    if (result.size() > 1000) break OUTER;
                 }
             }
         }
