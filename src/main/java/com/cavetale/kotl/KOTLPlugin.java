@@ -495,7 +495,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             if (i >= uuids.size()) break;
             UUID uuid = uuids.get(i);
             Player other = Bukkit.getPlayer(uuid);
-            if (other == null) return;
+            if (other == null) continue;
             int score = game.scores.get(uuid) / 20;
             if (score == 0) break;
             lines.add(Component.empty()
