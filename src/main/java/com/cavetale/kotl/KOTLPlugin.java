@@ -514,7 +514,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     void onPlayerRiptide(PlayerRiptideEvent event) {
         if (game.state != State.CLIMB) return;
         Player player = event.getPlayer();
-        if (!player.getWorld().getName().equals(game.world) || !game.area.contains(player.getLocation())) return;
+        if (!player.getWorld().getName().equals(game.world)) return;// || !game.area.contains(player.getLocation())) return;
         player.sendMessage(ChatColor.RED + "Riptide is not allowed in King of the Ladder!");
         spawnPlayer(player);
     }
