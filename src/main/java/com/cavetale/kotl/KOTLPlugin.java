@@ -444,7 +444,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     public void win(Player winner, int score) {
         game.winners.add(winner.getUniqueId());
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.getName() + " Climber LadderKing KingOfTheLadder QueenOfTheLadder VineClimber");
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.getName() + " Climber LadderKing KingOfTheLadder QueenOfTheLadder VineClimber Ladder");
         World world = getWorld();
         for (Player player: getWorld().getPlayers()) {
             if (!game.area.contains(player.getLocation())) continue;
