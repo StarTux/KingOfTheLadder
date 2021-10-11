@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,10 +19,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.md_5.bungee.api.ChatColor;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.GameMode;
@@ -55,6 +58,12 @@ import org.bukkit.util.Vector;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 public final class KOTLPlugin extends JavaPlugin implements Listener {
+    private static final List<String> WINNER_TITLES = List.of("Climber",
+                                                              "LadderKing",
+                                                              "KingOfTheLadder",
+                                                              "QueenOfTheLadder",
+                                                              "VineClimber",
+                                                              "Ladder");
     private Game game;
     private transient int spawnHeight;
     private BukkitTask task;
@@ -257,29 +266,33 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         case CLIMB: {
             // Check if everything is set
             if (game.spawnBlocks.isEmpty()) {
-                getServer().broadcast(ChatColor.RED + "[KOTL] No spawn blocks configured!", "kotl.admin");
+                getServer().broadcast(Component.text("[KOTL] No spawn blocks configured!", NamedTextColor.RED),
+                                      "kotl.admin");
                 return;
             }
             if (game.goal.equals(Rect.ZERO)) {
-                getServer().broadcast(ChatColor.RED + "[KOTL] No goal configured!", "kotl.admin");
+                getServer().broadcast(Component.text("[KOTL] No goal configured!", NamedTextColor.RED),
+                                      "kotl.admin");
                 return;
             }
             if (game.area.a.equals(Vec.ZERO) && game.area.b.equals(Vec.ZERO)) {
-                getServer().broadcast(ChatColor.RED + "[KOTL] No area configured!", "kotl.admin");
+                getServer().broadcast(Component.text("[KOTL] No area configured!", NamedTextColor.RED),
+                                      "kotl.admin");
                 return;
             }
             World world = getWorld();
             if (world == null) {
-                getServer().broadcast("[KOTL] World not found: " + game.world, "kotl.admin");
+                getServer().broadcast(Component.text("[KOTL] World not found: " + game.world, NamedTextColor.RED),
+                                      "kotl.admin");
                 return;
             }
             for (final Player player : world.getPlayers()) {
                 if (player.isOp() || player.getGameMode() == GameMode.SPECTATOR) continue;
                 if (!game.area.contains(player.getLocation())) continue;
                 spawnPlayer(player);
-                player.sendTitle("" + ChatColor.GOLD + ChatColor.ITALIC + "GO!",
-                                 "" + ChatColor.GOLD + "King of the Ladder",
-                                 0, 20, 60);
+                player.showTitle(Title.title(Component.text("GO!", NamedTextColor.GOLD, TextDecoration.ITALIC),
+                                             Component.text("King of the Ladder", NamedTextColor.RED),
+                                             Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(3))));
                 player.playSound(player.getEyeLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, SoundCategory.MASTER, 1.0f, 1.0f);
             }
             game.scores.clear();
@@ -444,13 +457,15 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     public void win(Player winner, int score) {
         game.winners.add(winner.getUniqueId());
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.getName() + " Climber LadderKing KingOfTheLadder QueenOfTheLadder VineClimber Ladder");
+        String cmd = "titles unlockset " + winner.getName() + " " + String.join(" ", WINNER_TITLES);
+        getLogger().info("Running command: " + cmd);
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
         World world = getWorld();
         for (Player player : getWorld().getPlayers()) {
             if (!game.area.contains(player.getLocation())) continue;
-            player.sendTitle(ChatColor.GOLD + winner.getName(),
-                             ChatColor.GOLD + "Wins King of the Ladder!",
-                             0, 20, 60);
+            player.showTitle(Title.title(Component.text(winner.getName(), NamedTextColor.GOLD),
+                                         Component.text("Wins King of the Ladder!", NamedTextColor.GOLD),
+                                         Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(3))));
             player.sendMessage("\n" + ChatColor.GOLD + winner.getName() + " wins King of the Ladder!\n ");
             player.playSound(player.getEyeLocation(), Sound.ENTITY_WITHER_DEATH, SoundCategory.MASTER, 0.5f, 1.0f);
         }
@@ -514,7 +529,8 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     void onPlayerRiptide(PlayerRiptideEvent event) {
         if (game.state != State.CLIMB) return;
         Player player = event.getPlayer();
-        if (!player.getWorld().getName().equals(game.world)) return;// || !game.area.contains(player.getLocation())) return;
+        if (!player.getWorld().getName().equals(game.world)) return;
+        if (!game.area.contains(player.getLocation())) return;
         player.sendMessage(ChatColor.RED + "Riptide is not allowed in King of the Ladder!");
         spawnPlayer(player);
     }
