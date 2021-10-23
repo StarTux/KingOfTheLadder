@@ -551,6 +551,10 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             if (game.goal.contains(player.getLocation())) {
                 goalPlayers.add(player);
             }
+            if (game.area.contains(player.getLocation())) {
+                player.setFoodLevel(20);
+                player.setSaturation(20f);
+            }
         }
         if (goalPlayers.size() == 1) {
             game.scores.compute(goalPlayers.get(0).getUniqueId(), (u, i) -> (i != null ? i : 0) + 1);
