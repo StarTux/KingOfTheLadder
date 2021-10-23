@@ -408,6 +408,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             return;
         }
         event.setCancelled(false);
+        event.setDamage(0.0);
     }
 
     @EventHandler(priority = EventPriority.LOW)
