@@ -1,5 +1,8 @@
 package com.cavetale.kotl;
 
+import com.cavetale.core.font.VanillaItems;
+import com.cavetale.fam.trophy.Highscore;
+import com.cavetale.mytems.item.trophy.TrophyCategory;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
@@ -19,12 +22,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.GameMode;
@@ -56,6 +55,15 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
+import static com.cavetale.core.font.Unicode.tiny;
+import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
+import static net.kyori.adventure.text.format.TextColor.color;
+import static net.kyori.adventure.text.format.TextDecoration.*;
+import static net.kyori.adventure.title.Title.Times.times;
+import static net.kyori.adventure.title.Title.title;
 
 public final class KOTLPlugin extends JavaPlugin implements Listener {
     private static final List<String> WINNER_TITLES = List.of("Climber",
@@ -64,9 +72,16 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                                                               "QueenOfTheLadder",
                                                               "VineClimber",
                                                               "Ladder");
-    private Game game;
+    protected Game game;
     private transient int spawnHeight;
     private BukkitTask task;
+    private List<Highscore> highscore;
+    public static final TextColor YELLOW2 = color(0xFFFF00);
+    public static final Component TITLE = join(noSeparators(),
+                                               text("King", YELLOW2),
+                                               text(tiny(" of the "), GRAY),
+                                               VanillaItems.LADDER.component,
+                                               text("Ladder", YELLOW2));
 
     // --- Java Plugin
 
@@ -74,10 +89,11 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     public void onEnable() {
         saveDefaultConfig();
         getCommand("kotl").setExecutor((a, b, c, d) -> onGameCommand(a, d));
-        getCommand("kotla").setExecutor((a, b, c, d) -> onAdminCommand(a, d));
+        new KOTLAdminCommand(this).enable();
         getServer().getPluginManager().registerEvents(this, this);
         loadGame();
         if (game.state == State.CLIMB) startTask();
+        if (game.event) computeHighscore();
     }
 
     @Override
@@ -102,105 +118,11 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         if (args.length != 0) return false;
         if (!(sender instanceof Player)) return false;
         Player player = (Player) sender;
-        spawnPlayer(player);
+        boolean result = spawnPlayer(player);
+        if (result && game.event) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+        }
         return true;
-    }
-
-    public boolean onAdminCommand(CommandSender sender, String[] args) {
-        if (args.length == 0) return false;
-        Player player = sender instanceof Player ? (Player) sender : null;
-        String cmd = args[0];
-        switch (args[0]) {
-        case "reload": {
-            if (args.length != 1) return false;
-            loadGame();
-            sender.sendMessage(ChatColor.YELLOW + "Game reloaded");
-            return true;
-        }
-        case "save": {
-            if (args.length != 1) return false;
-            saveGame();
-            sender.sendMessage(ChatColor.YELLOW + "Game saved");
-            return true;
-        }
-        case "setstate": {
-            if (args.length != 2) return false;
-            try {
-                setupState(State.valueOf(args[1].toUpperCase()));
-            } catch (IllegalArgumentException iae) {
-                sender.sendMessage(ChatColor.RED + "Unknown state: " + args[1]);
-                return true;
-            }
-            sender.sendMessage(ChatColor.YELLOW + "Started state " + game.state);
-            return true;
-        }
-        case "setarea": {
-            if (args.length != 1) return false;
-            if (player == null) {
-                sender.sendMessage("[KOTL] Player expected");
-                return true;
-            }
-            Rect sel = getSelection(player);
-            if (sel == null) {
-                sender.sendMessage(ChatColor.RED + "No selection!");
-                return true;
-            }
-            game.world = player.getWorld().getName();
-            game.area = sel;
-            saveGame();
-            sender.sendMessage(ChatColor.YELLOW + "Area set to " + sel);
-            return true;
-        }
-        case "setgoal": {
-            if (args.length != 1) return false;
-            if (player == null) {
-                sender.sendMessage("[KOTL] Player expected");
-                return true;
-            }
-            Rect sel = getSelection(player);
-            if (sel == null) {
-                sender.sendMessage(ChatColor.RED + "No selection!");
-                return true;
-            }
-            game.goal = sel;
-            saveGame();
-            sender.sendMessage(ChatColor.YELLOW + "Goal set to " + sel);
-            return true;
-        }
-        case "addspawn": {
-            if (args.length != 1) return false;
-            if (player == null) {
-                sender.sendMessage("[KOTL] Player expected");
-                return true;
-            }
-            Rect sel = getSelection(player);
-            if (sel == null) {
-                sender.sendMessage(ChatColor.RED + "No selection!");
-                return true;
-            }
-            List<Vec> vecs = sel.allVecs();
-            game.spawnBlocks.addAll(vecs);
-            saveGame();
-            sender.sendMessage("" + ChatColor.YELLOW + vecs.size() + " spawn blocks added");
-            return true;
-        }
-        case "clearspawn": {
-            if (args.length != 1) return false;
-            int count = game.spawnBlocks.size();
-            game.spawnBlocks.clear();
-            saveGame();
-            sender.sendMessage("" + ChatColor.YELLOW + count + " spawn blocks cleared");
-            return true;
-        }
-        case "clearwinners": {
-            if (args.length != 1) return false;
-            game.winners.clear();
-            saveGame();
-            sender.sendMessage(ChatColor.YELLOW + "Winners cleared");
-            return true;
-        }
-        default: return false;
-        }
     }
 
     // --- Player Utility
@@ -254,48 +176,50 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         return false;
     }
 
-    Rect getSelection(Player player) {
-        return WorldEdit.getSelection(player);
-    }
-
     void setupState(State state) {
         switch (state) {
         case PAUSE:
             stopTask();
+            if (game.event) {
+                computeHighscore();
+            }
             break;
         case CLIMB: {
             // Check if everything is set
             if (game.spawnBlocks.isEmpty()) {
-                getServer().broadcast(Component.text("[KOTL] No spawn blocks configured!", NamedTextColor.RED),
+                getServer().broadcast(text("[KOTL] No spawn blocks configured!", RED),
                                       "kotl.admin");
                 return;
             }
             if (game.goal.equals(Rect.ZERO)) {
-                getServer().broadcast(Component.text("[KOTL] No goal configured!", NamedTextColor.RED),
+                getServer().broadcast(text("[KOTL] No goal configured!", RED),
                                       "kotl.admin");
                 return;
             }
             if (game.area.a.equals(Vec.ZERO) && game.area.b.equals(Vec.ZERO)) {
-                getServer().broadcast(Component.text("[KOTL] No area configured!", NamedTextColor.RED),
+                getServer().broadcast(text("[KOTL] No area configured!", RED),
                                       "kotl.admin");
                 return;
             }
             World world = getWorld();
             if (world == null) {
-                getServer().broadcast(Component.text("[KOTL] World not found: " + game.world, NamedTextColor.RED),
+                getServer().broadcast(text("[KOTL] World not found: " + game.world, RED),
                                       "kotl.admin");
                 return;
             }
             for (final Player player : world.getPlayers()) {
-                if (player.isOp() || player.getGameMode() == GameMode.SPECTATOR) continue;
+                if (player.isOp() || player.getGameMode() == GameMode.SPECTATOR || player.getGameMode() == GameMode.CREATIVE) continue;
                 if (!game.area.contains(player.getLocation())) continue;
                 spawnPlayer(player);
-                player.showTitle(Title.title(Component.text("GO!", NamedTextColor.GOLD, TextDecoration.ITALIC),
-                                             Component.text("King of the Ladder", NamedTextColor.RED),
-                                             Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(3))));
+                player.showTitle(title(text("GO!", YELLOW2, ITALIC),
+                                       text("King of the Ladder", RED),
+                                       times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(3))));
                 player.playSound(player.getEyeLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, SoundCategory.MASTER, 1.0f, 1.0f);
+                if (game.event) {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+                }
             }
-            game.scores.clear();
+            game.progress.clear();
             reloadConfig();
             int time = getConfig().getInt("time", 300);
             game.timeLeft = time * 20;
@@ -323,7 +247,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             game.goal = new Rect(Vec.ZERO, Vec.ZERO);
             game.spawnBlocks = new HashSet<>();
             game.winners = new ArrayList<>();
-            game.scores = new HashMap<>();
+            game.progress = new HashMap<>();
         }
         recalculateSpawnHeight();
     }
@@ -358,11 +282,11 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         Location loc = player.getLocation();
         if (loc.getBlockY() > spawnHeight + 1 && playerCarriesItem(player)) {
             spawnPlayer(player);
-            player.sendMessage("" + ChatColor.RED + ChatColor.ITALIC + "You cannot wear or hold any items in KOTL!");
+            player.sendMessage(text("You cannot wear or hold any items in KOTL!", RED, ITALIC));
         } else if (player.isGliding()) {
             player.setGliding(false);
             spawnPlayer(player);
-            player.sendMessage("" + ChatColor.RED + ChatColor.ITALIC + "You cannot fly in KOTL!");
+            player.sendMessage(text("You cannot fly in KOTL!", RED, ITALIC));
         }
         for (PotionEffect potionEffect : player.getActivePotionEffects()) {
             player.removePotionEffect(potionEffect.getType());
@@ -380,7 +304,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             case CHORUS_FRUIT:
                 event.setCancelled(true);
                 spawnPlayer(player);
-                player.sendMessage("" + ChatColor.RED + ChatColor.ITALIC + "You cannot ender warp in KOTL!");
+                player.sendMessage(text("You cannot ender warp in KOTL!", RED, ITALIC));
                 break;
             default: break;
             }
@@ -458,16 +382,21 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     public void win(Player winner, int score) {
         game.winners.add(winner.getUniqueId());
-        String cmd = "titles unlockset " + winner.getName() + " " + String.join(" ", WINNER_TITLES);
-        getLogger().info("Running command: " + cmd);
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+        if (game.event) {
+            String cmd = "titles unlockset " + winner.getName() + " " + String.join(" ", WINNER_TITLES);
+            getLogger().info("Running command: " + cmd);
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+        }
         World world = getWorld();
         for (Player player : getWorld().getPlayers()) {
             if (!game.area.contains(player.getLocation())) continue;
-            player.showTitle(Title.title(Component.text(winner.getName(), NamedTextColor.GOLD),
-                                         Component.text("Wins King of the Ladder!", NamedTextColor.GOLD),
-                                         Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(3))));
-            player.sendMessage("\n" + ChatColor.GOLD + winner.getName() + " wins King of the Ladder!\n ");
+            player.showTitle(title(text(winner.getName(), YELLOW2),
+                                   text("Wins King of the Ladder!", YELLOW2),
+                                   times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(3))));
+            player.sendMessage(join(noSeparators(),
+                                    Component.newline(),
+                                    text(winner.getName() + " wins King of the Ladder!", YELLOW2),
+                                    Component.newline()));
             player.playSound(player.getEyeLocation(), Sound.ENTITY_WITHER_DEATH, SoundCategory.MASTER, 0.5f, 1.0f);
         }
         Firework firework = getWorld().spawn(winner.getLocation().add(0, 3.0, 0.0), Firework.class, (fw) -> {
@@ -496,34 +425,45 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerSidebar(PlayerSidebarEvent event) {
-        if (game == null || game.state != State.CLIMB) return;
+        if (game == null) return;
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(player.getLocation())) return;
-        List<UUID> uuids = new ArrayList<>(game.scores.keySet());
-        Collections.sort(uuids, (b, a) -> Integer.compare(game.scores.get(a), game.scores.get(b)));
-        List<Component> lines = new ArrayList<>();
-        int seconds = game.timeLeft / 20;
-        int minutes = seconds / 60;
-        lines.add(Component.text("King of the Ladder ").color(TextColor.color(0x00FF00))
-                  .append(Component.text(String.format("%02d:%02d", minutes, seconds % 60)).color(TextColor.color(0xAAAAAA))));
-        for (int i = 0; i < 5; i += 1) {
-            if (i >= uuids.size()) break;
-            UUID uuid = uuids.get(i);
-            Player other = Bukkit.getPlayer(uuid);
-            if (other == null) continue;
-            int score = game.scores.get(uuid) / 20;
-            if (score == 0) break;
-            lines.add(Component.empty()
-                      .append(Component.text(score + " ").color(TextColor.color(0xFFFF00)))
-                      .append(Component.text(other.getName()).color(TextColor.color(0xFFFFFF))));
+        if (game.state == State.CLIMB) {
+            List<UUID> uuids = new ArrayList<>(game.progress.keySet());
+            Collections.sort(uuids, (b, a) -> Integer.compare(game.progress.get(a), game.progress.get(b)));
+            List<Component> lines = new ArrayList<>();
+            int seconds = game.timeLeft / 20;
+            int minutes = seconds / 60;
+            lines.add(TITLE);
+            lines.add(join(noSeparators(),
+                           text("Time Left ", GRAY),
+                           text(String.format("%02dm %02ds", minutes, seconds % 60), YELLOW2)));
+            int playerScore = game.progress.getOrDefault(player.getUniqueId(), 0) / 20;
+            lines.add(join(noSeparators(),
+                           text("Your score ", GRAY),
+                           text(playerScore, YELLOW2)));
+            if (game.goal.contains(player.getLocation())) {
+                lines.add(text("Stay in the goal!", YELLOW2, BOLD));
+            }
+            for (int i = 0; i < 5; i += 1) {
+                if (i >= uuids.size()) break;
+                UUID uuid = uuids.get(i);
+                Player other = Bukkit.getPlayer(uuid);
+                if (other == null) continue;
+                int score = game.progress.get(uuid) / 20;
+                if (score == 0) break;
+                lines.add(join(noSeparators(),
+                               text(score + " ", YELLOW2),
+                               other.displayName()));
+            }
+            event.add(this, Priority.HIGHEST, lines);
+        } else if (game.event) {
+            List<Component> lines = new ArrayList<>();
+            lines.add(TITLE);
+            lines.addAll(Highscore.sidebar(highscore));
+            event.add(this, Priority.HIGHEST, lines);
         }
-        int playerScore = game.scores.computeIfAbsent(player.getUniqueId(), u -> 0) / 20;
-        lines.add(Component.text("Your score ").append(Component.text("" + playerScore).color(TextColor.color(0xFFFF00))));
-        if (game.goal.contains(player.getLocation())) {
-            lines.add(Component.text("Stay in the goal!").color(TextColor.color(0xFFFF00)).decorate(TextDecoration.BOLD));
-        }
-        event.add(this, Priority.HIGH, lines);
     }
 
     @EventHandler
@@ -532,7 +472,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(player.getLocation())) return;
-        player.sendMessage(ChatColor.RED + "Riptide is not allowed in King of the Ladder!");
+        player.sendMessage(text("Riptide is not allowed in King of the Ladder!", RED, ITALIC));
         spawnPlayer(player);
     }
 
@@ -557,18 +497,21 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             }
         }
         if (goalPlayers.size() == 1) {
-            game.scores.compute(goalPlayers.get(0).getUniqueId(), (u, i) -> (i != null ? i : 0) + 1);
+            UUID uuid = goalPlayers.get(0).getUniqueId();
+            game.progress.compute(uuid, (u, i) -> (i != null ? i : 0) + 1);
         }
         game.timeLeft -= 1;
         if (game.timeLeft <= 0) {
             Player winner = null;
             int max = 0;
-            for (Map.Entry<UUID, Integer> entry : game.scores.entrySet()) {
+            for (Map.Entry<UUID, Integer> entry : game.progress.entrySet()) {
                 UUID uuid = entry.getKey();
+                int score = entry.getValue();
+                if (game.event) {
+                    game.addScore(uuid, score / 20);
+                }
                 Player player = Bukkit.getPlayer(uuid);
                 if (player == null) continue;
-                int score = entry.getValue();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
                 if (score > max) {
                     winner = player;
                     max = score;
@@ -577,5 +520,17 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             if (winner != null) win(winner, max);
             setupState(State.PAUSE);
         }
+    }
+
+    protected void computeHighscore() {
+        highscore = Highscore.of(game.score);
+    }
+
+    protected int rewardHighscore() {
+        return Highscore.reward(game.score,
+                                "king_of_the_ladder_event",
+                                TrophyCategory.MEDAL,
+                                TITLE,
+                                hi -> "You conquered the ladder for " + hi.score + " second" + (hi.score == 1 ? "" : "s"));
     }
 }

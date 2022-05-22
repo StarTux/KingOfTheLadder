@@ -1,17 +1,23 @@
 main: com.cavetale.kotl.KOTLPlugin
 name: KingOfTheLadder
-version: '0.1'
-api-version: '1.17'
+
+version: 0.1
+api-version: 1.18
+
 description: King of the Ladder Event
 author: StarTux
 website: https://github.com/StarTux/KingOfTheLadder
-depend: [WorldEdit, Sidebar]
+
+depend: [Core, WorldEdit, Sidebar, Mytems, Fam]
 softdepend: []
+
 commands:
+
   kotl:
     description: King of the Ladder Warp
     permission: kotl.kotl
     usage: /kotl
+
   kotla:
     description: King of the Ladder Admin interface
     permission: kotl.admin
@@ -25,8 +31,9 @@ commands:
       /kotla addspawn - Add spawn blocks from selection
       /kotla clearspawn - Clear spawn blocks
       /kotla clearwinners - Clear winners
-      /kotla setlevel <name> <lvl> - Set player level
       /kotla clearlevels - Clear player levels
+
 permissions:
+
   kotl.kotl:
     description: Use /kotl
