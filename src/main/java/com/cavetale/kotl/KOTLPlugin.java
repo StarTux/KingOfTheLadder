@@ -2,6 +2,8 @@ package com.cavetale.kotl;
 
 import com.cavetale.core.font.VanillaItems;
 import com.cavetale.fam.trophy.Highscore;
+import com.cavetale.mytems.Mytems;
+import com.cavetale.mytems.MytemsTag;
 import com.cavetale.mytems.item.trophy.TrophyCategory;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
@@ -169,7 +171,11 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 player.getInventory().getLeggings(),
                 player.getInventory().getBoots()
             }) {
-            if (item != null && item.getType() != Material.AIR) {
+            if (item != null && !item.getType().isAir()) {
+                Mytems mytems = Mytems.forItem(item);
+                if (mytems != null && MytemsTag.WARDROBE.isTagged(mytems)) {
+                    continue;
+                }
                 return true;
             }
         }
@@ -312,7 +318,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGHEST)
-    void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+    private void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player)) return;
         Player player = (Player) event.getEntity();
         if (!player.getWorld().getName().equals(game.world)) return;
@@ -321,13 +327,16 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             event.setCancelled(true);
             return;
         }
-        if (!(event.getDamager() instanceof Player)) {
+        if (!(event.getDamager() instanceof Player damager)) {
             event.setCancelled(true);
             return;
         }
-        Player damager = (Player) event.getDamager();
         ItemStack hand = damager.getInventory().getItemInMainHand();
-        if (hand != null && hand.getAmount() != 0) {
+        if (hand != null && !hand.getType().isAir()) {
+            event.setCancelled(true);
+            return;
+        }
+        if (damager.getLocation().getBlockY() < spawnHeight + 2) {
             event.setCancelled(true);
             return;
         }
