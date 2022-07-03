@@ -6,7 +6,6 @@ import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
 import com.winthier.playercache.PlayerCache;
 import java.util.List;
-import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import static com.cavetale.kotl.WorldEdit.getSelection;
@@ -20,7 +19,6 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
 
     @Override
     protected void onEnable() {
-        rootNode.senderCaller(this::kotla);
         rootNode.addChild("start").denyTabCompletion()
             .description("Start the game")
             .senderCaller(this::start);
@@ -31,6 +29,28 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
             .description("Set event state")
             .completers(CommandArgCompleter.list("true", "false"))
             .senderCaller(this::event);
+        CommandNode configNode = rootNode.addChild("config");
+        configNode.addChild("reload").denyTabCompletion()
+            .description("Reload config")
+            .senderCaller(this::reload);
+        configNode.addChild("save").denyTabCompletion()
+            .description("Save config")
+            .senderCaller(this::save);
+        configNode.addChild("setarea").denyTabCompletion()
+            .description("Set game area")
+            .playerCaller(this::setArea);
+        configNode.addChild("setgoal").denyTabCompletion()
+            .description("Set goal area")
+            .playerCaller(this::setGoal);
+        configNode.addChild("addspawn").denyTabCompletion()
+            .description("Add selection to spawn")
+            .playerCaller(this::addSpawn);
+        configNode.addChild("clearspawn").denyTabCompletion()
+            .description("Clear spawn")
+            .playerCaller(this::clearSpawn);
+        configNode.addChild("clearwinners").denyTabCompletion()
+            .description("Clear winners")
+            .senderCaller(this::clearWinners);
         CommandNode scoreNode = rootNode.addChild("score").description("Score subcommands");
         scoreNode.addChild("reset").denyTabCompletion()
             .description("Reset scores")
@@ -45,107 +65,54 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
             .senderCaller(this::scoreReward);
     }
 
-    private boolean kotla(CommandSender sender, String[] args) {
-        boolean r = kotla2(sender, args);
-        if (!r) sender.sendMessage(plugin.getCommand(commandName).getUsage());
-        return true;
+    private void save(CommandSender sender) {
+        plugin.saveGame();
+        sender.sendMessage(text("Game saved", AQUA));
     }
 
-    private boolean kotla2(CommandSender sender, String[] args) {
-        if (args.length == 0) return false;
-        Player player = sender instanceof Player ? (Player) sender : null;
-        String cmd = args[0];
-        switch (args[0]) {
-        case "reload": {
-            if (args.length != 1) return false;
-            plugin.loadGame();
-            sender.sendMessage(ChatColor.YELLOW + "Game reloaded");
-            return true;
+    private void setArea(Player player) {
+        Rect sel = getSelection(player);
+        if (sel == null) {
+            throw new CommandWarn("No selection!");
         }
-        case "save": {
-            if (args.length != 1) return false;
-            plugin.saveGame();
-            sender.sendMessage(ChatColor.YELLOW + "Game saved");
-            return true;
+        plugin.game.world = player.getWorld().getName();
+        plugin.game.area = sel;
+        plugin.saveGame();
+        player.sendMessage(text("Area set to " + sel, AQUA));
+    }
+
+    private void setGoal(Player player) {
+        Rect sel = getSelection(player);
+        if (sel == null) {
+            throw new CommandWarn("No selection!");
         }
-        case "setstate": {
-            if (args.length != 2) return false;
-            try {
-                plugin.setupState(State.valueOf(args[1].toUpperCase()));
-            } catch (IllegalArgumentException iae) {
-                sender.sendMessage(ChatColor.RED + "Unknown state: " + args[1]);
-                return true;
-            }
-            sender.sendMessage(ChatColor.YELLOW + "Started state " + plugin.game.state);
-            return true;
+        plugin.game.goal = sel;
+        plugin.saveGame();
+        player.sendMessage(text("Goal set to " + sel, AQUA));
+    }
+
+    private void addSpawn(Player player) {
+        Rect sel = getSelection(player);
+        if (sel == null) {
+            throw new CommandWarn("No selection!");
         }
-        case "setarea": {
-            if (args.length != 1) return false;
-            if (player == null) {
-                sender.sendMessage("[KOTL] Player expected");
-                return true;
-            }
-            Rect sel = getSelection(player);
-            if (sel == null) {
-                sender.sendMessage(ChatColor.RED + "No selection!");
-                return true;
-            }
-            plugin.game.world = player.getWorld().getName();
-            plugin.game.area = sel;
-            plugin.saveGame();
-            sender.sendMessage(ChatColor.YELLOW + "Area set to " + sel);
-            return true;
-        }
-        case "setgoal": {
-            if (args.length != 1) return false;
-            if (player == null) {
-                sender.sendMessage("[KOTL] Player expected");
-                return true;
-            }
-            Rect sel = getSelection(player);
-            if (sel == null) {
-                sender.sendMessage(ChatColor.RED + "No selection!");
-                return true;
-            }
-            plugin.game.goal = sel;
-            plugin.saveGame();
-            sender.sendMessage(ChatColor.YELLOW + "Goal set to " + sel);
-            return true;
-        }
-        case "addspawn": {
-            if (args.length != 1) return false;
-            if (player == null) {
-                sender.sendMessage("[KOTL] Player expected");
-                return true;
-            }
-            Rect sel = getSelection(player);
-            if (sel == null) {
-                sender.sendMessage(ChatColor.RED + "No selection!");
-                return true;
-            }
-            List<Vec> vecs = sel.allVecs();
-            plugin.game.spawnBlocks.addAll(vecs);
-            plugin.saveGame();
-            sender.sendMessage("" + ChatColor.YELLOW + vecs.size() + " spawn blocks added");
-            return true;
-        }
-        case "clearspawn": {
-            if (args.length != 1) return false;
-            int count = plugin.game.spawnBlocks.size();
-            plugin.game.spawnBlocks.clear();
-            plugin.saveGame();
-            sender.sendMessage("" + ChatColor.YELLOW + count + " spawn blocks cleared");
-            return true;
-        }
-        case "clearwinners": {
-            if (args.length != 1) return false;
-            plugin.game.winners.clear();
-            plugin.saveGame();
-            sender.sendMessage(ChatColor.YELLOW + "Winners cleared");
-            return true;
-        }
-        default: return false;
-        }
+        List<Vec> vecs = sel.allVecs();
+        plugin.game.spawnBlocks.addAll(vecs);
+        plugin.saveGame();
+        player.sendMessage(text(vecs.size() + " spawn blocks added", AQUA));
+    }
+
+    private void clearSpawn(CommandSender sender) {
+        int count = plugin.game.spawnBlocks.size();
+        plugin.game.spawnBlocks.clear();
+        plugin.saveGame();
+        sender.sendMessage(text(count + " spawn blocks cleared", AQUA));
+    }
+
+    private void clearWinners(CommandSender sender) {
+        plugin.game.winners.clear();
+        plugin.saveGame();
+        sender.sendMessage(text("Winners cleared", AQUA));
     }
 
     private void start(CommandSender sender) {
@@ -176,6 +143,11 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
                            ? text("Event mode enabled", GREEN)
                            : text("Event mode disabled", RED));
         return true;
+    }
+
+    private void reload(CommandSender sender) {
+        plugin.loadGame();
+        sender.sendMessage(text("Game reloaded", AQUA));
     }
 
     private void scoreReset(CommandSender sender) {

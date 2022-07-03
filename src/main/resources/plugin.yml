@@ -21,19 +21,14 @@ commands:
   kotla:
     description: King of the Ladder Admin interface
     permission: kotl.admin
-    usage: |-
-      /kotl
-      /kotla reload - Reload game
-      /kotla save - Save game - Should not be needed
-      /kotla setstate PAUSE|CLIMB
-      /kotla setarea - Set area
-      /kotla setgoal - Set goal area
-      /kotla addspawn - Add spawn blocks from selection
-      /kotla clearspawn - Clear spawn blocks
-      /kotla clearwinners - Clear winners
-      /kotla clearlevels - Clear player levels
+    usage: /kotla
 
 permissions:
 
   kotl.kotl:
     description: Use /kotl
+    default: op
+
+  kotl.admin:
+    description: Use /kotla
+    default: op

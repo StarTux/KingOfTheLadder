@@ -30,7 +30,6 @@ import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
@@ -77,7 +76,8 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     protected Game game;
     private transient int spawnHeight;
     private BukkitTask task;
-    private List<Highscore> highscore;
+    private List<Highscore> highscore = List.of();
+    private List<Component> highscoreLines = List.of();
     public static final TextColor YELLOW2 = color(0xFFFF00);
     public static final Component TITLE = join(noSeparators(),
                                                text("King", YELLOW2),
@@ -470,7 +470,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         } else if (game.event) {
             List<Component> lines = new ArrayList<>();
             lines.add(TITLE);
-            lines.addAll(Highscore.sidebar(highscore));
+            lines.addAll(highscoreLines);
             event.add(this, Priority.HIGHEST, lines);
         }
     }
@@ -533,6 +533,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     protected void computeHighscore() {
         highscore = Highscore.of(game.score);
+        highscoreLines = Highscore.sidebar(highscore, TrophyCategory.LADDER);
     }
 
     protected int rewardHighscore() {
