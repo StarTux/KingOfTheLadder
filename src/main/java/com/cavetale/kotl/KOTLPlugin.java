@@ -116,9 +116,6 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         if (!(sender instanceof Player)) return false;
         Player player = (Player) sender;
         boolean result = spawnPlayer(player);
-        if (result && game.event) {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
-        }
         return true;
     }
 
@@ -152,7 +149,12 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     boolean spawnPlayer(Player player) {
         Location location = randomSpawnLocation(player);
         if (location == null) return false;
-        return player.teleport(location);
+        boolean result = player.teleport(location);
+        if (result && game.event && !game.score.containsKey(player.getUniqueId())) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+            game.score.computeIfAbsent(player.getUniqueId(), u -> 0);
+        }
+        return result;
     }
 
     boolean playerCarriesItem(Player player) {
@@ -217,6 +219,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 player.playSound(player.getEyeLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, SoundCategory.MASTER, 1.0f, 1.0f);
                 if (game.event) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+                    game.score.computeIfAbsent(player.getUniqueId(), u -> 0);
                 }
             }
             game.progress.clear();
