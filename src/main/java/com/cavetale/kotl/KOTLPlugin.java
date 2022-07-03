@@ -529,7 +529,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     protected int rewardHighscore() {
         return Highscore.reward(game.score,
                                 "king_of_the_ladder_event",
-                                TrophyCategory.MEDAL,
+                                TrophyCategory.LADDER,
                                 TITLE,
                                 hi -> "You conquered the ladder for " + hi.score + " second" + (hi.score == 1 ? "" : "s"));
     }
