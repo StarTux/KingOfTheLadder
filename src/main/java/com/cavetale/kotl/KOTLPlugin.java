@@ -173,7 +173,8 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             }) {
             if (item != null && !item.getType().isAir()) {
                 Mytems mytems = Mytems.forItem(item);
-                if (mytems != null && MytemsTag.WARDROBE.isTagged(mytems)) {
+                if (mytems != null && (MytemsTag.WARDROBE.isTagged(mytems) || MytemsTag.WARDROBE_HAT.isTagged(mytems))) {
+                    // Temporary workaround (WITCH_HAT is not in WARDROBE)
                     continue;
                 }
                 return true;
