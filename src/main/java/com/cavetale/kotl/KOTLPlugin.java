@@ -1,6 +1,8 @@
 package com.cavetale.kotl;
 
+import com.cavetale.core.event.player.PlayerTPAEvent;
 import com.cavetale.core.font.VanillaItems;
+import com.cavetale.core.util.Json;
 import com.cavetale.fam.trophy.Highscore;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.MytemsTag;
@@ -8,12 +10,7 @@ import com.cavetale.mytems.item.trophy.TrophyCategory;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -85,8 +82,6 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                                                VanillaItems.LADDER.component,
                                                text("Ladder", YELLOW2));
 
-    // --- Java Plugin
-
     @Override
     public void onEnable() {
         saveDefaultConfig();
@@ -126,8 +121,6 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         }
         return true;
     }
-
-    // --- Player Utility
 
     Location randomSpawnLocation() {
         World world = getServer().getWorld(game.world);
@@ -215,7 +208,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 return;
             }
             for (final Player player : world.getPlayers()) {
-                if (player.isOp() || player.getGameMode() == GameMode.SPECTATOR || player.getGameMode() == GameMode.CREATIVE) continue;
+                if (player.getGameMode() == GameMode.SPECTATOR || player.getGameMode() == GameMode.CREATIVE) continue;
                 if (!game.area.contains(player.getLocation())) continue;
                 spawnPlayer(player);
                 player.showTitle(title(text("GO!", YELLOW2, ITALIC),
@@ -242,11 +235,9 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         saveGame();
     }
 
-    void loadGame() {
-        Gson gson = new Gson();
-        try {
-            game = gson.fromJson(new FileReader(new File(getDataFolder(), "game.json")), Game.class);
-        } catch (IOException fnfe) {
+    protected void loadGame() {
+        game = Json.load(new File(getDataFolder(), "game.json"), Game.class);
+        if (game == null) {
             game = new Game();
             game.state = State.PAUSE;
             game.world = getServer().getWorlds().get(0).getName();
@@ -259,32 +250,23 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         recalculateSpawnHeight();
     }
 
-    void recalculateSpawnHeight() {
+    protected void saveGame() {
+        getDataFolder().mkdirs();
+        Json.save(new File(getDataFolder(), "game.json"), game);
+    }
+
+    private void recalculateSpawnHeight() {
         spawnHeight = 0;
         for (Vec spawnBlock: game.spawnBlocks) {
             spawnHeight = Math.max(spawnHeight, spawnBlock.y);
         }
     }
 
-    void saveGame() {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        getDataFolder().mkdirs();
-        try {
-            FileWriter fw = new FileWriter(new File(getDataFolder(), "game.json"));
-            gson.toJson(game, fw);
-            fw.close();
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
-    }
-
-    // --- Event Handling
-
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         if (game.state != State.CLIMB) return;
         Player player = event.getPlayer();
-        if (player.isOp() || player.getGameMode() == GameMode.SPECTATOR || player.getGameMode() == GameMode.CREATIVE) return;
+        if (player.getGameMode() == GameMode.SPECTATOR || player.getGameMode() == GameMode.CREATIVE) return;
         if (!player.getWorld().getName().equals(game.world) || !game.area.contains(player.getLocation())) return;
         Location loc = player.getLocation();
         if (loc.getBlockY() > spawnHeight + 1 && playerCarriesItem(player)) {
@@ -302,8 +284,9 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
+        if (game.state != State.CLIMB) return;
         Player player = event.getPlayer();
-        if (player.isOp() || player.getGameMode() == GameMode.SPECTATOR) return;
+        if (player.getGameMode() == GameMode.SPECTATOR) return;
         Location to = event.getTo();
         if (to.getWorld().getName().equals(game.world) && game.area.contains(to)) {
             switch (event.getCause()) {
@@ -315,6 +298,16 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 break;
             default: break;
             }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerTPAEvent(PlayerTPAEvent event) {
+        if (game.state != State.CLIMB) return;
+        Player player = event.getTarget();
+        Location loc = player.getLocation();
+        if (loc.getWorld().getName().equals(game.world) && game.area.contains(loc)) {
+            event.setCancelled(true);
         }
     }
 
@@ -346,7 +339,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOW)
-    void onPlayerLaunchProjectile(PlayerLaunchProjectileEvent event) {
+    private void onPlayerLaunchProjectile(PlayerLaunchProjectileEvent event) {
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(player.getLocation())) return;
@@ -354,7 +347,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOW)
-    void onProjectileLaunch(ProjectileLaunchEvent event) {
+    private void onProjectileLaunch(ProjectileLaunchEvent event) {
         Projectile projectile = event.getEntity();
         if (!projectile.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(projectile.getLocation())) return;
@@ -362,7 +355,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOW)
-    void onPlayerDropItem(PlayerDropItemEvent event) {
+    private void onPlayerDropItem(PlayerDropItemEvent event) {
         if (game.state != State.CLIMB) return;
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
@@ -371,7 +364,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOW)
-    void onEntityCombustByEntity(EntityCombustByEntityEvent event) {
+    private void onEntityCombustByEntity(EntityCombustByEntityEvent event) {
         Entity entity = event.getEntity();
         if (!entity.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(entity.getLocation())) return;
@@ -379,7 +372,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onPlayerSpawnLocation(PlayerSpawnLocationEvent event) {
+    private void onPlayerSpawnLocation(PlayerSpawnLocationEvent event) {
         if (game.state != State.CLIMB) return;
         Location spawnLocation = event.getSpawnLocation();
         if (game.goal.contains(spawnLocation) && spawnLocation.getWorld().getName().equals(game.world)) {
@@ -390,7 +383,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    public void win(Player winner, int score) {
+    private void win(Player winner, int score) {
         game.winners.add(winner.getUniqueId());
         if (game.event) {
             String cmd = "titles unlockset " + winner.getName() + " " + String.join(" ", WINNER_TITLES);
@@ -426,7 +419,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
-    public void onPlayerRespawn(PlayerRespawnEvent event) {
+    private void onPlayerRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(player.getLocation())) return;
@@ -434,7 +427,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onPlayerSidebar(PlayerSidebarEvent event) {
+    private void onPlayerSidebar(PlayerSidebarEvent event) {
         if (game == null) return;
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
@@ -477,7 +470,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    void onPlayerRiptide(PlayerRiptideEvent event) {
+    private void onPlayerRiptide(PlayerRiptideEvent event) {
         if (game.state != State.CLIMB) return;
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
@@ -486,11 +479,11 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         spawnPlayer(player);
     }
 
-    public World getWorld() {
+    private World getWorld() {
         return Bukkit.getWorld(game.world);
     }
 
-    void run() {
+    private void run() {
         World world = getWorld();
         if (world == null) {
             setupState(State.PAUSE);
