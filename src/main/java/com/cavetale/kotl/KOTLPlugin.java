@@ -1,5 +1,6 @@
 package com.cavetale.kotl;
 
+import com.cavetale.core.event.block.PlayerBlockAbilityQuery;
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.event.player.PlayerTPAEvent;
@@ -369,6 +370,17 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         event.setCancelled(true);
     }
 
+    @EventHandler(ignoreCancelled = true)
+    private void onPlayerBlockAbility(PlayerBlockAbilityQuery event) {
+        if (game.state != State.CLIMB) return;
+        if (event.getAction() == PlayerBlockAbilityQuery.Action.FLY) {
+            Player player = event.getPlayer();
+            if (!player.getWorld().getName().equals(game.world)) return;
+            if (!game.area.contains(player.getLocation())) return;
+            event.setCancelled(true);
+        }
+    }
+
     @EventHandler(priority = EventPriority.LOW)
     private void onEntityCombustByEntity(EntityCombustByEntityEvent event) {
         Entity entity = event.getEntity();
@@ -506,6 +518,10 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             if (game.area.contains(player.getLocation())) {
                 player.setFoodLevel(20);
                 player.setSaturation(20f);
+                if (player.isInsideVehicle()) {
+                    player.leaveVehicle();
+                    player.sendMessage(text("Vehicles not allowed in King of the Ladder!", RED, ITALIC));
+                }
             }
         }
         if (goalPlayers.size() == 1) {
