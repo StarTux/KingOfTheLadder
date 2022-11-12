@@ -4,11 +4,12 @@ import com.cavetale.core.command.AbstractCommand;
 import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
+import com.cavetale.core.struct.Cuboid;
+import com.cavetale.core.struct.Vec3i;
 import com.winthier.playercache.PlayerCache;
 import java.util.List;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import static com.cavetale.kotl.WorldEdit.getSelection;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
@@ -71,10 +72,7 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
     }
 
     private void setArea(Player player) {
-        Rect sel = getSelection(player);
-        if (sel == null) {
-            throw new CommandWarn("No selection!");
-        }
+        Rect sel = new Rect(Cuboid.requireSelectionOf(player));
         plugin.game.world = player.getWorld().getName();
         plugin.game.area = sel;
         plugin.saveGame();
@@ -82,21 +80,15 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
     }
 
     private void setGoal(Player player) {
-        Rect sel = getSelection(player);
-        if (sel == null) {
-            throw new CommandWarn("No selection!");
-        }
+        Rect sel = new Rect(Cuboid.requireSelectionOf(player));
         plugin.game.goal = sel;
         plugin.saveGame();
         player.sendMessage(text("Goal set to " + sel, AQUA));
     }
 
     private void addSpawn(Player player) {
-        Rect sel = getSelection(player);
-        if (sel == null) {
-            throw new CommandWarn("No selection!");
-        }
-        List<Vec> vecs = sel.allVecs();
+        Rect sel = new Rect(Cuboid.requireSelectionOf(player));
+        List<Vec3i> vecs = sel.allVecs();
         plugin.game.spawnBlocks.addAll(vecs);
         plugin.saveGame();
         player.sendMessage(text(vecs.size() + " spawn blocks added", AQUA));

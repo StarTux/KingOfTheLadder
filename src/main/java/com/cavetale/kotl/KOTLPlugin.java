@@ -1,14 +1,14 @@
 package com.cavetale.kotl;
 
+import com.cavetale.core.event.hud.PlayerHudEvent;
+import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.event.player.PlayerTPAEvent;
-import com.cavetale.core.font.VanillaItems;
+import com.cavetale.core.struct.Vec3i;
 import com.cavetale.core.util.Json;
 import com.cavetale.fam.trophy.Highscore;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.MytemsTag;
 import com.cavetale.mytems.item.trophy.TrophyCategory;
-import com.cavetale.sidebar.PlayerSidebarEvent;
-import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import java.io.File;
 import java.time.Duration;
@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
@@ -56,6 +57,7 @@ import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 import static com.cavetale.core.font.Unicode.tiny;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 import static net.kyori.adventure.text.format.TextColor.color;
@@ -64,12 +66,14 @@ import static net.kyori.adventure.title.Title.Times.times;
 import static net.kyori.adventure.title.Title.title;
 
 public final class KOTLPlugin extends JavaPlugin implements Listener {
+    public static final int GAME_TIME = 300;
     private static final List<String> WINNER_TITLES = List.of("Climber",
                                                               "LadderKing",
                                                               "KingOfTheLadder",
                                                               "QueenOfTheLadder",
                                                               "VineClimber",
-                                                              "Ladder");
+                                                              "Ladder",
+                                                              "Vine");
     protected Game game;
     private transient int spawnHeight;
     private BukkitTask task;
@@ -78,13 +82,14 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     public static final TextColor YELLOW2 = color(0xFFFF00);
     public static final Component TITLE = join(noSeparators(),
                                                text("King", YELLOW2),
-                                               text(tiny(" of the "), GRAY),
-                                               VanillaItems.LADDER.component,
+                                               Mytems.GOLD_LADDER_TROPHY,
+                                               text(tiny("of"), GRAY),
+                                               text(tiny("the"), DARK_GRAY),
+                                               Mytems.PARTICIPATION_LADDER_TROPHY,
                                                text("Ladder", YELLOW2));
 
     @Override
     public void onEnable() {
-        saveDefaultConfig();
         getCommand("kotl").setExecutor((a, b, c, d) -> onGameCommand(a, d));
         new KOTLAdminCommand(this).enable();
         getServer().getPluginManager().registerEvents(this, this);
@@ -123,7 +128,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         World world = getServer().getWorld(game.world);
         if (world == null) return null;
         if (game.spawnBlocks.isEmpty()) return null;
-        Vec spawnBlock = new ArrayList<>(game.spawnBlocks).get(ThreadLocalRandom.current().nextInt(game.spawnBlocks.size()));
+        Vec3i spawnBlock = new ArrayList<>(game.spawnBlocks).get(ThreadLocalRandom.current().nextInt(game.spawnBlocks.size()));
         Location location = world
             .getBlockAt(spawnBlock.x, spawnBlock.y, spawnBlock.z)
             .getLocation()
@@ -136,7 +141,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         if (world == null) return null;
         Location playerLocation = player.getLocation();
         if (game.spawnBlocks.isEmpty()) return null;
-        Vec spawnBlock = new ArrayList<>(game.spawnBlocks).get(ThreadLocalRandom.current().nextInt(game.spawnBlocks.size()));
+        Vec3i spawnBlock = new ArrayList<>(game.spawnBlocks).get(ThreadLocalRandom.current().nextInt(game.spawnBlocks.size()));
         Location location = world
             .getBlockAt(spawnBlock.x, spawnBlock.y, spawnBlock.z)
             .getLocation()
@@ -198,7 +203,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                                       "kotl.admin");
                 return;
             }
-            if (game.area.a.equals(Vec.ZERO) && game.area.b.equals(Vec.ZERO)) {
+            if (game.area.a.equals(Vec3i.ZERO) && game.area.b.equals(Vec3i.ZERO)) {
                 getServer().broadcast(text("[KOTL] No area configured!", RED),
                                       "kotl.admin");
                 return;
@@ -223,9 +228,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 }
             }
             game.progress.clear();
-            reloadConfig();
-            int time = getConfig().getInt("time", 300);
-            game.timeLeft = time * 20;
+            game.timeLeft = GAME_TIME * 20;
             stopTask();
             startTask();
             recalculateSpawnHeight();
@@ -244,8 +247,8 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             game = new Game();
             game.state = State.PAUSE;
             game.world = getServer().getWorlds().get(0).getName();
-            game.area = new Rect(Vec.ZERO, Vec.ZERO);
-            game.goal = new Rect(Vec.ZERO, Vec.ZERO);
+            game.area = new Rect(Vec3i.ZERO, Vec3i.ZERO);
+            game.goal = new Rect(Vec3i.ZERO, Vec3i.ZERO);
             game.spawnBlocks = new HashSet<>();
             game.winners = new ArrayList<>();
             game.progress = new HashMap<>();
@@ -260,7 +263,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     private void recalculateSpawnHeight() {
         spawnHeight = 0;
-        for (Vec spawnBlock: game.spawnBlocks) {
+        for (Vec3i spawnBlock: game.spawnBlocks) {
             spawnHeight = Math.max(spawnHeight, spawnBlock.y);
         }
     }
@@ -430,7 +433,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    private void onPlayerSidebar(PlayerSidebarEvent event) {
+    private void onPlayerHud(PlayerHudEvent event) {
         if (game == null) return;
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
@@ -463,12 +466,15 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                                text(score + " ", YELLOW2),
                                other.displayName()));
             }
-            event.add(this, Priority.HIGHEST, lines);
+            event.sidebar(PlayerHudPriority.HIGHEST, lines);
+            event.bossbar(PlayerHudPriority.HIGHEST, textOfChildren(TITLE, text(" " + playerScore, YELLOW2)),
+                          BossBar.Color.GREEN, BossBar.Overlay.PROGRESS,
+                          (float) game.timeLeft / (float) (GAME_TIME * 20));
         } else if (game.event) {
             List<Component> lines = new ArrayList<>();
             lines.add(TITLE);
             lines.addAll(highscoreLines);
-            event.add(this, Priority.HIGHEST, lines);
+            event.sidebar(PlayerHudPriority.HIGHEST, lines);
         }
     }
 

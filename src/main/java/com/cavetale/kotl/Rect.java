@@ -1,15 +1,22 @@
 package com.cavetale.kotl;
 
+import com.cavetale.core.struct.Cuboid;
+import com.cavetale.core.struct.Vec3i;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import org.bukkit.Location;
 
-@Value
+@Value @RequiredArgsConstructor
 public final class Rect {
-    public static final Rect ZERO = new Rect(Vec.ZERO, Vec.ZERO);
-    public final Vec a;
-    public final Vec b;
+    public static final Rect ZERO = new Rect(Vec3i.ZERO, Vec3i.ZERO);
+    public final Vec3i a;
+    public final Vec3i b;
+
+    public Rect(final Cuboid cuboid) {
+        this(cuboid.getMin(), cuboid.getMax());
+    }
 
     public boolean contains(int x, int y, int z) {
         return x >= a.x
@@ -31,12 +38,12 @@ public final class Rect {
         return a + "-" + b;
     }
 
-    public List<Vec> allVecs() {
-        List<Vec> result = new ArrayList<>();
+    public List<Vec3i> allVecs() {
+        List<Vec3i> result = new ArrayList<>();
         OUTER: for (int y = a.y; y <= b.y; y += 1) {
             for (int z = a.z; z <= b.z; z += 1) {
                 for (int x = a.x; x <= b.x; x += 1) {
-                    result.add(Vec.v(x, y, z));
+                    result.add(Vec3i.of(x, y, z));
                     if (result.size() > 1000) break OUTER;
                 }
             }

@@ -8,7 +8,7 @@ description: King of the Ladder Event
 author: StarTux
 website: https://github.com/StarTux/KingOfTheLadder
 
-depend: [Core, WorldEdit, Sidebar, Mytems, Fam]
+depend: [Core, Mytems, Fam]
 softdepend: []
 
 commands:

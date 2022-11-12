@@ -1,5 +1,6 @@
 package com.cavetale.kotl;
 
+import com.cavetale.core.struct.Vec3i;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,7 +15,7 @@ public final class Game {
     protected String world;
     protected Rect area;
     protected Rect goal;
-    protected Set<Vec> spawnBlocks;
+    protected Set<Vec3i> spawnBlocks;
     protected List<UUID> winners = new ArrayList<>();
     protected Map<UUID, Integer> progress = new HashMap<>();
     protected int timeLeft;

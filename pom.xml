@@ -25,12 +25,6 @@
       <url>https://papermc.io/repo/repository/maven-public/</url>
     </repository>
 
-    <!-- WorldEdit Repo -->
-    <repository>
-      <id>worldedit</id>
-      <url>http://maven.enginehub.org/repo/</url>
-    </repository>
-
   </repositories>
   <dependencies>
 
@@ -66,14 +60,6 @@
       <scope>provided</scope>
     </dependency>
 
-    <!-- Sidebar -->
-    <dependency>
-      <groupId>com.cavetale.sidebar</groupId>
-      <artifactId>sidebar</artifactId>
-      <version>0.1-SNAPSHOT</version>
-      <scope>provided</scope>
-    </dependency>
-
     <!-- Mytems -->
     <dependency>
       <groupId>com.cavetale.mytems</groupId>
@@ -87,14 +73,6 @@
       <groupId>com.cavetale.fam</groupId>
       <artifactId>fam</artifactId>
       <version>0.1-SNAPSHOT</version>
-      <scope>provided</scope>
-    </dependency>
-
-    <!-- WorldEdit -->
-    <dependency>
-      <groupId>com.sk89q.worldedit</groupId>
-      <artifactId>worldedit-bukkit</artifactId>
-      <version>7.3.0-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
 
