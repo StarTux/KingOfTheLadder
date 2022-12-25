@@ -55,8 +55,10 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
+import static com.cavetale.core.font.Unicode.subscript;
 import static com.cavetale.core.font.Unicode.tiny;
 import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.newline;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
@@ -67,7 +69,8 @@ import static net.kyori.adventure.title.Title.Times.times;
 import static net.kyori.adventure.title.Title.title;
 
 public final class KOTLPlugin extends JavaPlugin implements Listener {
-    public static final int GAME_TIME = 300;
+    public static final int GAME_TIME = 60 * 10; // seconds
+    public static final int END_TIME = 60; // seconds
     private static final List<String> WINNER_TITLES = List.of("Climber",
                                                               "LadderKing",
                                                               "KingOfTheLadder",
@@ -95,7 +98,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         new KOTLAdminCommand(this).enable();
         getServer().getPluginManager().registerEvents(this, this);
         loadGame();
-        if (game.state == State.CLIMB) startTask();
+        if (game.state != State.PAUSE) startTask();
         if (game.event) computeHighscore();
     }
 
@@ -105,12 +108,12 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         stopTask();
     }
 
-    void startTask() {
+    protected void startTask() {
         stopTask();
-        task = Bukkit.getScheduler().runTaskTimer(this, this::run, 1L, 1L);
+        task = Bukkit.getScheduler().runTaskTimer(this, this::tick, 1L, 1L);
     }
 
-    void stopTask() {
+    protected void stopTask() {
         if (task != null) {
             task.cancel();
             task = null;
@@ -230,9 +233,12 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             }
             game.progress.clear();
             game.timeLeft = GAME_TIME * 20;
-            stopTask();
             startTask();
             recalculateSpawnHeight();
+            break;
+        }
+        case END: {
+            game.timeLeft = END_TIME * 20;
             break;
         }
         default:
@@ -415,9 +421,9 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                                    text("Wins King of the Ladder!", YELLOW2),
                                    times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(3))));
             player.sendMessage(join(noSeparators(),
-                                    Component.newline(),
+                                    newline(),
                                     text(winner.getName() + " wins King of the Ladder!", YELLOW2),
-                                    Component.newline()));
+                                    newline()));
             player.playSound(player.getEyeLocation(), Sound.ENTITY_WITHER_DEATH, SoundCategory.MASTER, 0.5f, 1.0f);
         }
         Firework firework = getWorld().spawn(winner.getLocation().add(0, 3.0, 0.0), Firework.class, (fw) -> {
@@ -456,17 +462,21 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             List<Component> lines = new ArrayList<>();
             int seconds = game.timeLeft / 20;
             int minutes = seconds / 60;
-            lines.add(TITLE);
+            lines.add(textOfChildren(text("    "), TITLE, text("    ")));
+            if (game.goal.contains(player.getLocation())) {
+                if (game.timeLeft % 10 < 5) {
+                    lines.add(text("Stay in the goal!", YELLOW2, BOLD));
+                } else {
+                    lines.add(text("Stay in the goal!", GOLD, BOLD));
+                }
+            }
             lines.add(join(noSeparators(),
-                           text("Time Left ", GRAY),
+                           text(subscript("time left "), GRAY),
                            text(String.format("%02dm %02ds", minutes, seconds % 60), YELLOW2)));
             int playerScore = game.progress.getOrDefault(player.getUniqueId(), 0) / 20;
             lines.add(join(noSeparators(),
-                           text("Your score ", GRAY),
+                           text(subscript("your score "), GRAY),
                            text(playerScore, YELLOW2)));
-            if (game.goal.contains(player.getLocation())) {
-                lines.add(text("Stay in the goal!", YELLOW2, BOLD));
-            }
             for (int i = 0; i < 5; i += 1) {
                 if (i >= uuids.size()) break;
                 UUID uuid = uuids.get(i);
@@ -474,14 +484,24 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 if (other == null) continue;
                 int score = game.progress.get(uuid) / 20;
                 if (score == 0) break;
-                lines.add(join(noSeparators(),
-                               text(score + " ", YELLOW2),
-                               other.displayName()));
+                if (game.goal.contains(other.getLocation())) {
+                    lines.add(textOfChildren(text(subscript(score), GOLD, BOLD), other.displayName()));
+                } else {
+                    lines.add(textOfChildren(text(subscript(score), GRAY), other.displayName()));
+                }
             }
             event.sidebar(PlayerHudPriority.HIGHEST, lines);
-            event.bossbar(PlayerHudPriority.HIGHEST, textOfChildren(TITLE, text(" " + playerScore, YELLOW2)),
+            event.bossbar(PlayerHudPriority.HIGHEST, textOfChildren(TITLE, text(": ", GRAY), text(playerScore, YELLOW2)),
                           BossBar.Color.GREEN, BossBar.Overlay.PROGRESS,
                           (float) game.timeLeft / (float) (GAME_TIME * 20));
+        } else if (game.state == State.END) {
+            List<Component> lines = new ArrayList<>();
+            lines.add(TITLE);
+            lines.addAll(highscoreLines);
+            event.sidebar(PlayerHudPriority.HIGHEST, lines);
+            event.bossbar(PlayerHudPriority.HIGHEST, TITLE,
+                          BossBar.Color.WHITE, BossBar.Overlay.PROGRESS,
+                          1.0f - ((float) game.timeLeft / (float) (END_TIME * 20)));
         } else if (game.event) {
             List<Component> lines = new ArrayList<>();
             lines.add(TITLE);
@@ -504,7 +524,15 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         return Bukkit.getWorld(game.world);
     }
 
-    private void run() {
+    private void tick() {
+        switch (game.state) {
+        case CLIMB: tickClimb(); break;
+        case END: tickEnd(); break;
+        default: break;
+        }
+    }
+
+    private void tickClimb() {
         World world = getWorld();
         if (world == null) {
             setupState(State.PAUSE);
@@ -546,7 +574,15 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 }
             }
             if (winner != null) win(winner, max);
-            setupState(State.PAUSE);
+            setupState(State.END);
+        }
+    }
+
+    private void tickEnd() {
+        if (game.timeLeft <= 0) {
+            setupState(State.CLIMB);
+        } else {
+            game.timeLeft -= 1;
         }
     }
 
