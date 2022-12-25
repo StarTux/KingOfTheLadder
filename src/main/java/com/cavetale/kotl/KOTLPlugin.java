@@ -238,6 +238,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             break;
         }
         case END: {
+            if (game.event) computeHighscore();
             game.timeLeft = END_TIME * 20;
             break;
         }
