@@ -270,7 +270,8 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
     }
 
     private void recalculateSpawnHeight() {
-        spawnHeight = 0;
+        World world = getServer().getWorld(game.world);
+        spawnHeight = world.getMinHeight();
         for (Vec3i spawnBlock: game.spawnBlocks) {
             spawnHeight = Math.max(spawnHeight, spawnBlock.y);
         }
