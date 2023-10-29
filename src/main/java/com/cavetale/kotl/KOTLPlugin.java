@@ -444,7 +444,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         firework.detonate();
     }
 
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     private void onPlayerRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
