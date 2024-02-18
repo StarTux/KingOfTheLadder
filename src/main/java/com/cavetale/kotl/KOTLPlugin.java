@@ -364,6 +364,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             target.setVelocity(velo);
             target.getWorld().playSound(target.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.MASTER, 1f, 1.45f);
             target.getWorld().spawnParticle(Particle.WHITE_SMOKE, target.getLocation(), 16, 0.2, 0.2, 0.2, 0.0);
+            getLogger().info(damager.getName() + " hit " + target.getName() + " HARD");
         }
     }
 
