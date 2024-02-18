@@ -587,7 +587,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 int score = entry.getValue();
                 if (game.event) {
                     game.addScore(uuid, score / 20);
-                    Money.get().give(uuid, score * 300, this, "King of the Ladder", r -> { });
+                    Money.get().give(uuid, score * 15, this, "King of the Ladder", r -> { });
                 }
                 Player player = Bukkit.getPlayer(uuid);
                 if (player == null) continue;
