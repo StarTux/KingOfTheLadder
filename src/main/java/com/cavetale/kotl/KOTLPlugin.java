@@ -358,7 +358,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         final int targetScore = game.getScore(target.getUniqueId());
         final long slapCooldown = game.slapCooldown.getOrDefault(target, 0L);
         final long now = System.currentTimeMillis();
-        if (slapCooldown < now && targetScore >= damagerScore + 5) {
+        if (slapCooldown < now && targetScore > damagerScore) {
             game.slapCooldown.put(target.getUniqueId(), now + 2000L);
             final var velo = new Vector(random.nextDouble() * 2.0 - 1.0, random.nextDouble() * 1.0, random.nextDouble() * 2.0 - 1.0);
             target.setVelocity(velo);
