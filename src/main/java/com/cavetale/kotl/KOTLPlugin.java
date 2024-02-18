@@ -360,10 +360,10 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         //     event.setCancelled(true);
         //     return;
         // }
-        final long slapCooldown = game.slapCooldown.getOrDefault(target, 0L);
+        final long slapCooldown = game.slapCooldown.getOrDefault(target.getUniqueId(), 0L);
         final long now = System.currentTimeMillis();
         if (slapCooldown < now && targetScore > damagerScore + 20) {
-            game.slapCooldown.put(target.getUniqueId(), now + 2000L);
+            game.slapCooldown.put(target.getUniqueId(), now + 1000L);
             final var velo = new Vector(random.nextDouble() * 2.0 - 1.0, random.nextDouble() * 1.0, random.nextDouble() * 2.0 - 1.0);
             target.setVelocity(velo);
             target.getWorld().playSound(target.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.MASTER, 1f, 1.45f);
