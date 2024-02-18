@@ -356,10 +356,10 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         event.setDamage(0.0);
         final int damagerScore = game.progress.getOrDefault(damager.getUniqueId(), 0);
         final int targetScore = game.progress.getOrDefault(target.getUniqueId(), 0);
-        if (damagerScore > targetScore + 20) {
-            event.setCancelled(true);
-            return;
-        }
+        // if (damagerScore > targetScore + 20) {
+        //     event.setCancelled(true);
+        //     return;
+        // }
         final long slapCooldown = game.slapCooldown.getOrDefault(target, 0L);
         final long now = System.currentTimeMillis();
         if (slapCooldown < now && targetScore > damagerScore + 20) {
