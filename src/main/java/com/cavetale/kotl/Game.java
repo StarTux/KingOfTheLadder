@@ -21,6 +21,7 @@ public final class Game {
     protected int timeLeft;
     protected boolean event;
     protected Map<UUID, Integer> score = new HashMap<>();
+    protected Map<UUID, Long> slapCooldown = new HashMap<>();
 
     public int getScore(UUID uuid) {
         return score.getOrDefault(uuid, 0);

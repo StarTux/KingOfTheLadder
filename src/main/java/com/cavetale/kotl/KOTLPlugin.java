@@ -4,6 +4,7 @@ import com.cavetale.core.event.block.PlayerBlockAbilityQuery;
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.event.player.PlayerTPAEvent;
+import com.cavetale.core.money.Money;
 import com.cavetale.core.struct.Vec3i;
 import com.cavetale.core.util.Json;
 import com.cavetale.fam.trophy.Highscore;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.bossbar.BossBar;
@@ -29,6 +31,7 @@ import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
@@ -91,6 +94,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                                                text(tiny("the"), DARK_GRAY),
                                                Mytems.PARTICIPATION_LADDER_TROPHY,
                                                text("Ladder", YELLOW2));
+    private final Random random = ThreadLocalRandom.current();
 
     @Override
     public void onEnable() {
@@ -132,7 +136,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         World world = getServer().getWorld(game.world);
         if (world == null) return null;
         if (game.spawnBlocks.isEmpty()) return null;
-        Vec3i spawnBlock = new ArrayList<>(game.spawnBlocks).get(ThreadLocalRandom.current().nextInt(game.spawnBlocks.size()));
+        Vec3i spawnBlock = new ArrayList<>(game.spawnBlocks).get(random.nextInt(game.spawnBlocks.size()));
         Location location = world
             .getBlockAt(spawnBlock.x, spawnBlock.y, spawnBlock.z)
             .getLocation()
@@ -145,7 +149,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         if (world == null) return null;
         Location playerLocation = player.getLocation();
         if (game.spawnBlocks.isEmpty()) return null;
-        Vec3i spawnBlock = new ArrayList<>(game.spawnBlocks).get(ThreadLocalRandom.current().nextInt(game.spawnBlocks.size()));
+        Vec3i spawnBlock = new ArrayList<>(game.spawnBlocks).get(random.nextInt(game.spawnBlocks.size()));
         Location location = world
             .getBlockAt(spawnBlock.x, spawnBlock.y, spawnBlock.z)
             .getLocation()
@@ -328,10 +332,9 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGHEST)
     private void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (!(event.getEntity() instanceof Player)) return;
-        Player player = (Player) event.getEntity();
-        if (!player.getWorld().getName().equals(game.world)) return;
-        if (!game.area.contains(player.getLocation())) return;
+        if (!(event.getEntity() instanceof Player target)) return;
+        if (!target.getWorld().getName().equals(game.world)) return;
+        if (!game.area.contains(target.getLocation())) return;
         if (game.state != State.CLIMB) {
             event.setCancelled(true);
             return;
@@ -340,7 +343,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             event.setCancelled(true);
             return;
         }
-        ItemStack hand = damager.getInventory().getItemInMainHand();
+        final ItemStack hand = damager.getInventory().getItemInMainHand();
         if (hand != null && !hand.getType().isAir()) {
             event.setCancelled(true);
             return;
@@ -351,6 +354,17 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
         }
         event.setCancelled(false);
         event.setDamage(0.0);
+        final int damagerScore = game.getScore(damager.getUniqueId());
+        final int targetScore = game.getScore(target.getUniqueId());
+        final long slapCooldown = game.slapCooldown.getOrDefault(target, 0L);
+        final long now = System.currentTimeMillis();
+        if (slapCooldown < now && targetScore >= damagerScore + 5) {
+            game.slapCooldown.put(target.getUniqueId(), now + 2000L);
+            final var velo = new Vector(random.nextDouble() * 2.0 - 1.0, random.nextDouble() * 1.0, random.nextDouble() * 2.0 - 1.0);
+            target.setVelocity(velo);
+            target.getWorld().playSound(target.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.MASTER, 1f, 1.45f);
+            target.getWorld().spawnParticle(Particle.WHITE_SMOKE, target.getLocation(), 16, 0.2, 0.2, 0.2, 0.0);
+        }
     }
 
     @EventHandler(priority = EventPriority.LOW)
@@ -415,6 +429,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
             String cmd = "titles unlockset " + winner.getName() + " " + String.join(" ", WINNER_TITLES);
             getLogger().info("Running command: " + cmd);
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+            winner.getInventory().addItem(Mytems.KITTY_COIN.createItemStack());
         }
         World world = getWorld();
         for (Player player : getWorld().getPlayers()) {
@@ -567,6 +582,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
                 int score = entry.getValue();
                 if (game.event) {
                     game.addScore(uuid, score / 20);
+                    Money.get().give(uuid, score * 300, this, "King of the Ladder", r -> { });
                 }
                 Player player = Bukkit.getPlayer(uuid);
                 if (player == null) continue;
