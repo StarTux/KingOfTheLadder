@@ -374,6 +374,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     private void onPlayerLaunchProjectile(PlayerLaunchProjectileEvent event) {
+        if (game.state != State.CLIMB) return;
         Player player = event.getPlayer();
         if (!player.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(player.getLocation())) return;
@@ -382,6 +383,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     private void onProjectileLaunch(ProjectileLaunchEvent event) {
+        if (game.state != State.CLIMB) return;
         Projectile projectile = event.getEntity();
         if (!projectile.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(projectile.getLocation())) return;
@@ -410,6 +412,7 @@ public final class KOTLPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     private void onEntityCombustByEntity(EntityCombustByEntityEvent event) {
+        if (game.state != State.CLIMB) return;
         Entity entity = event.getEntity();
         if (!entity.getWorld().getName().equals(game.world)) return;
         if (!game.area.contains(entity.getLocation())) return;
