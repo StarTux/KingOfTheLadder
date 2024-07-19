@@ -4,13 +4,17 @@ import com.cavetale.core.command.AbstractCommand;
 import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
-import com.cavetale.core.struct.Cuboid;
-import com.cavetale.core.struct.Vec3i;
+import com.cavetale.core.event.minigame.MinigameMatchType;
+import com.winthier.creative.BuildWorld;
 import com.winthier.playercache.PlayerCache;
+import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import static com.cavetale.kotl.Games.games;
+import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
@@ -20,38 +24,32 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
 
     @Override
     protected void onEnable() {
-        rootNode.addChild("start").denyTabCompletion()
-            .description("Start the game")
+        rootNode.addChild("start").arguments("<world>")
+            .completers(CommandArgCompleter.supplyList(this::listMinigameWorldPaths))
+            .description("Start a game")
             .senderCaller(this::start);
-        rootNode.addChild("stop").denyTabCompletion()
-            .description("Stop the game")
+        rootNode.addChild("stop").arguments("<world>")
+            .completers(CommandArgCompleter.supplyList(() -> List.copyOf(games().getWorldGameMap().keySet())))
+            .description("Stop current game")
             .senderCaller(this::stop);
+        rootNode.addChild("list").denyTabCompletion()
+            .description("List active games")
+            .senderCaller(this::list);
         rootNode.addChild("event").arguments("true|false")
             .description("Set event state")
             .completers(CommandArgCompleter.list("true", "false"))
             .senderCaller(this::event);
+        rootNode.addChild("timeleft").arguments("<seconds>")
+            .description("Set time left")
+            .completers(CommandArgCompleter.integer(i -> i >= 0))
+            .playerCaller(this::timeLeft);
         CommandNode configNode = rootNode.addChild("config");
-        configNode.addChild("reload").denyTabCompletion()
-            .description("Reload config")
-            .senderCaller(this::reload);
         configNode.addChild("save").denyTabCompletion()
             .description("Save config")
             .senderCaller(this::save);
-        configNode.addChild("setarea").denyTabCompletion()
-            .description("Set game area")
-            .playerCaller(this::setArea);
-        configNode.addChild("setgoal").denyTabCompletion()
-            .description("Set goal area")
-            .playerCaller(this::setGoal);
-        configNode.addChild("addspawn").denyTabCompletion()
-            .description("Add selection to spawn")
-            .playerCaller(this::addSpawn);
-        configNode.addChild("clearspawn").denyTabCompletion()
-            .description("Clear spawn")
-            .playerCaller(this::clearSpawn);
-        configNode.addChild("clearwinners").denyTabCompletion()
-            .description("Clear winners")
-            .senderCaller(this::clearWinners);
+        configNode.addChild("reload").denyTabCompletion()
+            .description("Reload config")
+            .senderCaller(this::reload);
         CommandNode scoreNode = rootNode.addChild("score").description("Score subcommands");
         scoreNode.addChild("reset").denyTabCompletion()
             .description("Reset scores")
@@ -67,54 +65,74 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
     }
 
     private void save(CommandSender sender) {
-        plugin.saveGame();
+        plugin.saveSaveTag();
         sender.sendMessage(text("Game saved", AQUA));
     }
 
-    private void setArea(Player player) {
-        Rect sel = new Rect(Cuboid.requireSelectionOf(player));
-        plugin.game.world = player.getWorld().getName();
-        plugin.game.area = sel;
-        plugin.saveGame();
-        player.sendMessage(text("Area set to " + sel, AQUA));
+    private void reload(CommandSender sender) {
+        plugin.loadSaveTag();
+        sender.sendMessage(text("Save tag reloaded", AQUA));
     }
 
-    private void setGoal(Player player) {
-        Rect sel = new Rect(Cuboid.requireSelectionOf(player));
-        plugin.game.goal = sel;
-        plugin.saveGame();
-        player.sendMessage(text("Goal set to " + sel, AQUA));
+    public List<String> listMinigameWorldPaths() {
+        List<String> result = new ArrayList<>();
+        for (BuildWorld buildWorld : BuildWorld.findMinigameWorlds(MinigameMatchType.KING_OF_THE_LADDER, false)) {
+            result.add(buildWorld.getPath());
+        }
+        return result;
     }
 
-    private void addSpawn(Player player) {
-        Rect sel = new Rect(Cuboid.requireSelectionOf(player));
-        List<Vec3i> vecs = sel.allVecs();
-        plugin.game.spawnBlocks.addAll(vecs);
-        plugin.saveGame();
-        player.sendMessage(text(vecs.size() + " spawn blocks added", AQUA));
+    private boolean start(CommandSender sender, String[] args) {
+        if (args.length != 1) return false;
+        final String path = args[0];
+        final BuildWorld buildWorld = BuildWorld.findWithPath(path);
+        if (buildWorld == null) {
+            throw new CommandWarn("BuildWorld not found: " + path);
+        }
+        if (buildWorld.getRow().parseMinigame() != MinigameMatchType.KING_OF_THE_LADDER) {
+            throw new CommandWarn("Not a KOTL world: " + path);
+        }
+        games().startGame(buildWorld, game -> {
+                sender.sendMessage(text("Starting game in " + buildWorld.getName(), GREEN));
+            });
+        sender.sendMessage(text("Game starting...", AQUA));
+        return true;
     }
 
-    private void clearSpawn(CommandSender sender) {
-        int count = plugin.game.spawnBlocks.size();
-        plugin.game.spawnBlocks.clear();
-        plugin.saveGame();
-        sender.sendMessage(text(count + " spawn blocks cleared", AQUA));
+    private boolean stop(CommandSender sender, String[] args) {
+        if (args.length != 1) return false;
+        final String worldName = args[0];
+        final Game game = games().getWorldGameMap().get(worldName);
+        if (game == null) {
+            throw new CommandWarn("Game not found: " + worldName);
+        }
+        games().stopGame(game);
+        sender.sendMessage(text("Game stopped: " + game.getWorld().getName(), AQUA));
+        return true;
     }
 
-    private void clearWinners(CommandSender sender) {
-        plugin.game.winners.clear();
-        plugin.saveGame();
-        sender.sendMessage(text("Winners cleared", AQUA));
+    private void list(CommandSender sender) {
+        if (games().getWorldGameMap().isEmpty()) {
+            throw new CommandWarn("No games to show");
+        }
+        for (Game game : games().getWorldGameMap().values()) {
+            sender.sendMessage(textOfChildren(text(game.getWorld().getName(), GRAY),
+                                              space(),
+                                              text("" + game.getState(), YELLOW),
+                                              space(),
+                                              text(game.getWorld().getPlayers() + "player", GRAY)));
+        }
+        sender.sendMessage(text("" + games().getWorldGameMap().size() + " games in total", YELLOW));
     }
 
-    private void start(CommandSender sender) {
-        plugin.setupState(State.CLIMB);
-        sender.sendMessage(text("Game started", AQUA));
-    }
-
-    private void stop(CommandSender sender) {
-        plugin.setupState(State.PAUSE);
-        sender.sendMessage(text("Game stopped", AQUA));
+    private boolean timeLeft(Player player, String[] args) {
+        if (args.length != 1) return false;
+        final int timeLeft = CommandArgCompleter.requireInt(args[0], i -> i >= 0);
+        if (!games().apply(player.getWorld(), game -> game.setTimeLeft(timeLeft * 20))) {
+            throw new CommandWarn("There is no game here");
+        }
+        player.sendMessage(text("Changed time left to " + timeLeft + " seconds", AQUA));
+        return true;
     }
 
     private boolean event(CommandSender sender, String[] args) {
@@ -122,8 +140,8 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
         if (args.length == 1) {
             try {
                 Boolean value = Boolean.parseBoolean(args[0]);
-                plugin.game.setEvent(value);
-                plugin.saveGame();
+                plugin.getSaveTag().setEvent(value);
+                plugin.saveSaveTag();
                 if (value) {
                     plugin.computeHighscore();
                 }
@@ -131,21 +149,16 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
                 throw new CommandWarn("Not a boolean: " + args[0]);
             }
         }
-        sender.sendMessage(plugin.game.isEvent()
+        sender.sendMessage(plugin.getSaveTag().isEvent()
                            ? text("Event mode enabled", GREEN)
                            : text("Event mode disabled", RED));
         return true;
     }
 
-    private void reload(CommandSender sender) {
-        plugin.loadGame();
-        sender.sendMessage(text("Game reloaded", AQUA));
-    }
-
     private void scoreReset(CommandSender sender) {
-        plugin.game.getScore().clear();
-        plugin.saveGame();
-        if (plugin.game.event) {
+        plugin.getSaveTag().getScore().clear();
+        plugin.saveSaveTag();
+        if (plugin.getSaveTag().isEvent()) {
             plugin.computeHighscore();
         }
         sender.sendMessage(text("All scores were reset", AQUA));
@@ -155,12 +168,12 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
         if (args.length != 2) return false;
         PlayerCache target = PlayerCache.require(args[0]);
         int value = CommandArgCompleter.requireInt(args[1], i -> true);
-        plugin.game.addScore(target.uuid, value);
-        if (plugin.game.event) {
+        plugin.getSaveTag().addScore(target.uuid, value);
+        if (plugin.getSaveTag().isEvent()) {
             plugin.computeHighscore();
         }
         sender.sendMessage(text("Score of " + target.name + " is now "
-                                + plugin.game.getScore(target.uuid), AQUA));
+                                + plugin.getSaveTag().getScore(target.uuid), AQUA));
         return true;
     }
 
