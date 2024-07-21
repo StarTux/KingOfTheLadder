@@ -494,7 +494,6 @@ public final class Game {
             String cmd = "titles unlockset " + winner.getName() + " " + String.join(" ", WINNER_TITLES);
             log("Running command: " + cmd);
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-            winner.getInventory().addItem(Mytems.KITTY_COIN.createItemStack());
         }
         for (Player player : world.getPlayers()) {
             if (!isInsideGameArea(player.getLocation())) continue;
