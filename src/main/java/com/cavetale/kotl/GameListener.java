@@ -49,7 +49,9 @@ public final class GameListener implements Listener {
         if (!games().apply(event.getEntity().getWorld(), game -> game.onEntityDamage(event))) {
             if (event.getEntity() instanceof Player player) {
                 event.setCancelled(true);
-                Bukkit.getScheduler().runTask(kotlPlugin(), () -> player.teleport(kotlPlugin().getLobbyWorld().getSpawnLocation()));
+                if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
+                    Bukkit.getScheduler().runTask(kotlPlugin(), () -> player.teleport(kotlPlugin().getLobbyWorld().getSpawnLocation()));
+                }
             }
         }
     }
