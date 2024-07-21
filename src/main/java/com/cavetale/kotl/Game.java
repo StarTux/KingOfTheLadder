@@ -139,7 +139,10 @@ public final class Game {
         }
         chunkLock = chunksToLoad.size() + 1;
         for (Vec2i it : chunksToLoad) {
-            world.getChunkAtAsync(it.x, it.z, (Consumer<Chunk>) chunk -> reduceChunkLock());
+            world.getChunkAtAsync(it.x, it.z, (Consumer<Chunk>) chunk -> {
+                    chunk.addPluginChunkTicket(kotlPlugin());
+                    reduceChunkLock();
+                });
         }
         world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
         world.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
@@ -165,6 +168,7 @@ public final class Game {
             player.eject();
             player.teleport(kotlPlugin().getLobbyWorld().getSpawnLocation());
         }
+        world.removePluginChunkTickets(kotlPlugin());
         Files.deleteWorld(world);
     }
 
