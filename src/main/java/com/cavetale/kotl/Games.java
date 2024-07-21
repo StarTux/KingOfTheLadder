@@ -36,7 +36,8 @@ public final class Games {
             }
         } else {
             // No games.
-            if (kotlPlugin().getLobbyWorld().getPlayers().size() >= 2) {
+            final boolean paused = kotlPlugin().getSaveTag().isPause();
+            if (!paused && kotlPlugin().getLobbyWorld().getPlayers().size() >= 2) {
                 // 2 or more players in lobby
                 if (!MapVote.isActive(MinigameMatchType.KING_OF_THE_LADDER)) {
                     MapVote.start(MinigameMatchType.KING_OF_THE_LADDER, v -> {
