@@ -555,8 +555,6 @@ public final class Game {
                 goalPlayers.add(player);
             }
             if (isInsideGameArea(player.getLocation())) {
-                player.setFoodLevel(20);
-                player.setSaturation(20f);
                 if (player.isInsideVehicle()) {
                     player.leaveVehicle();
                     player.sendMessage(text("Vehicles not allowed in King of the Ladder!", RED, ITALIC));
