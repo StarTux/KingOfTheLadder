@@ -413,6 +413,8 @@ public final class Game {
         player.setFoodLevel(20);
         player.setSaturation(20f);
         player.setFallDistance(0);
+        player.getInventory().clear();
+        player.getEnderChest().clear();
         if (kotlPlugin().getSaveTag().isEvent() && !kotlPlugin().getSaveTag().getScore().containsKey(player.getUniqueId())) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
             kotlPlugin().getSaveTag().getScore().computeIfAbsent(player.getUniqueId(), u -> 0);
