@@ -9,6 +9,7 @@ import lombok.Data;
 @Data
 public final class SaveTag implements Serializable {
     private boolean event;
+    private boolean pause;
     private Map<UUID, Integer> score = new HashMap<>();
 
     public int getScore(UUID uuid) {

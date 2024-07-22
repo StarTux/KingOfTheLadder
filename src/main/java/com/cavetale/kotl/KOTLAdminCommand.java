@@ -37,8 +37,12 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
             .senderCaller(this::list);
         rootNode.addChild("event").arguments("true|false")
             .description("Set event state")
-            .completers(CommandArgCompleter.list("true", "false"))
+            .completers(CommandArgCompleter.BOOLEAN)
             .senderCaller(this::event);
+        rootNode.addChild("pause").arguments("true|false")
+            .description("Set event state")
+            .completers(CommandArgCompleter.BOOLEAN)
+            .senderCaller(this::pause);
         rootNode.addChild("timeleft").arguments("<seconds>")
             .description("Set time left")
             .completers(CommandArgCompleter.integer(i -> i >= 0))
@@ -152,6 +156,26 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
         sender.sendMessage(plugin.getSaveTag().isEvent()
                            ? text("Event mode enabled", GREEN)
                            : text("Event mode disabled", RED));
+        return true;
+    }
+
+    private boolean pause(CommandSender sender, String[] args) {
+        if (args.length > 1) return false;
+        if (args.length == 1) {
+            try {
+                Boolean value = Boolean.parseBoolean(args[0]);
+                plugin.getSaveTag().setPause(value);
+                plugin.saveSaveTag();
+                if (value) {
+                    plugin.computeHighscore();
+                }
+            } catch (IllegalArgumentException iae) {
+                throw new CommandWarn("Not a boolean: " + args[0]);
+            }
+        }
+        sender.sendMessage(plugin.getSaveTag().isPause()
+                           ? text("Paused", GREEN)
+                           : text("Unpaused", RED));
         return true;
     }
 

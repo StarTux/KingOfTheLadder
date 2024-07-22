@@ -139,7 +139,10 @@ public final class Game {
         }
         chunkLock = chunksToLoad.size() + 1;
         for (Vec2i it : chunksToLoad) {
-            world.getChunkAtAsync(it.x, it.z, (Consumer<Chunk>) chunk -> reduceChunkLock());
+            world.getChunkAtAsync(it.x, it.z, (Consumer<Chunk>) chunk -> {
+                    chunk.addPluginChunkTicket(kotlPlugin());
+                    reduceChunkLock();
+                });
         }
         world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
         world.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
@@ -165,6 +168,7 @@ public final class Game {
             player.eject();
             player.teleport(kotlPlugin().getLobbyWorld().getSpawnLocation());
         }
+        world.removePluginChunkTickets(kotlPlugin());
         Files.deleteWorld(world);
     }
 
@@ -413,6 +417,8 @@ public final class Game {
         player.setFoodLevel(20);
         player.setSaturation(20f);
         player.setFallDistance(0);
+        player.getInventory().clear();
+        player.getEnderChest().clear();
         if (kotlPlugin().getSaveTag().isEvent() && !kotlPlugin().getSaveTag().getScore().containsKey(player.getUniqueId())) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
             kotlPlugin().getSaveTag().getScore().computeIfAbsent(player.getUniqueId(), u -> 0);
@@ -494,7 +500,6 @@ public final class Game {
             String cmd = "titles unlockset " + winner.getName() + " " + String.join(" ", WINNER_TITLES);
             log("Running command: " + cmd);
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-            winner.getInventory().addItem(Mytems.KITTY_COIN.createItemStack());
         }
         for (Player player : world.getPlayers()) {
             if (!isInsideGameArea(player.getLocation())) continue;
@@ -555,8 +560,6 @@ public final class Game {
                 goalPlayers.add(player);
             }
             if (isInsideGameArea(player.getLocation())) {
-                player.setFoodLevel(20);
-                player.setSaturation(20f);
                 if (player.isInsideVehicle()) {
                     player.leaveVehicle();
                     player.sendMessage(text("Vehicles not allowed in King of the Ladder!", RED, ITALIC));
