@@ -229,7 +229,7 @@ public final class Game {
         if (!isInsideGameArea(to)) return;
         switch (event.getCause()) {
         case ENDER_PEARL:
-        case CHORUS_FRUIT:
+        case CONSUMABLE_EFFECT:
             event.setCancelled(true);
             spawnPlayer(player);
             player.sendMessage(text("You cannot ender warp in KOTL!", RED, ITALIC));
