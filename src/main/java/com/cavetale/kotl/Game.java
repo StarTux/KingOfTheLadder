@@ -4,6 +4,8 @@ import com.cavetale.area.struct.AreasFile;
 import com.cavetale.core.event.block.PlayerBlockAbilityQuery;
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
+import com.cavetale.core.event.minigame.MinigameMatchCompleteEvent;
+import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.event.player.PlayerTPAEvent;
 import com.cavetale.core.money.Money;
 import com.cavetale.core.struct.Cuboid;
@@ -89,6 +91,7 @@ public final class Game {
     private List<UUID> winners = new ArrayList<>();
     private Map<UUID, Integer> progress = new HashMap<>();
     private Map<UUID, Long> slapCooldowns = new HashMap<>();
+    private Set<UUID> playerSet = new HashSet<>();
     private int timeLeft;
     // Setup
     private final List<Cuboid> gameAreas = new ArrayList<>();
@@ -479,6 +482,14 @@ public final class Game {
         case END: {
             timeLeft = END_TIME * 20;
             MapReview.start(world, buildWorld).remindAll();
+            final MinigameMatchCompleteEvent event = new MinigameMatchCompleteEvent(MinigameMatchType.KING_OF_THE_LADDER);
+            for (UUID player : playerSet) {
+                event.addPlayerUuid(player);
+            }
+            for (UUID winner : winners) {
+                event.addWinnerUuid(winner);
+            }
+            event.callEvent();
             break;
         }
         default:
@@ -560,6 +571,7 @@ public final class Game {
                 goalPlayers.add(player);
             }
             if (isInsideGameArea(player.getLocation())) {
+                playerSet.add(player.getUniqueId());
                 if (player.isInsideVehicle()) {
                     player.leaveVehicle();
                     player.sendMessage(text("Vehicles not allowed in King of the Ladder!", RED, ITALIC));
