@@ -81,8 +81,8 @@ import static net.kyori.adventure.title.Title.title;
 public final class Game {
     public static final String AREAS_FILE_NAME = "KingOfTheLadder";
     public static final int COUNTDOWN_TIME = 10; // seconds
-    public static final int GAME_TIME = 60 * 10; // seconds
-    public static final int END_TIME = 60; // seconds
+    private int gameTime = 60 * 10; // seconds
+    private static final int END_TIME = 60; // seconds
     // Constructor
     private final BuildWorld buildWorld;
     private final World world;
@@ -126,6 +126,9 @@ public final class Game {
         if (state != GameState.INIT) {
             throw new IllegalStateException("State = " + state);
         }
+        gameTime = kotlPlugin().getSaveTag().isEvent()
+            ? 60 * 10 // seconds
+            : 60 * 5;
         setupState(GameState.LOAD);
         loadAreas();
         final Set<Vec2i> chunksToLoad = new HashSet<>();
@@ -373,7 +376,7 @@ public final class Game {
         event.sidebar(PlayerHudPriority.HIGHEST, lines);
         event.bossbar(PlayerHudPriority.HIGHEST, textOfChildren(TITLE, text(": ", GRAY), text(playerScore, YELLOW2)),
                       BossBar.Color.GREEN, BossBar.Overlay.PROGRESS,
-                      (float) timeLeft / (float) (GAME_TIME * 20));
+                      (float) timeLeft / (float) (gameTime * 20));
     }
 
     protected void onPlayerRiptide(PlayerRiptideEvent event) {
@@ -475,7 +478,7 @@ public final class Game {
                 }
             }
             progress.clear();
-            timeLeft = GAME_TIME * 20;
+            timeLeft = gameTime * 20;
             recalculateSpawnHeight();
             break;
         }
