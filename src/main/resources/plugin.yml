@@ -2,7 +2,7 @@ main: com.cavetale.kotl.KOTLPlugin
 name: KingOfTheLadder
 
 version: 0.1
-api-version: '1.21.8'
+api-version: '1.21.10'
 
 description: King of the Ladder Event
 author: StarTux
