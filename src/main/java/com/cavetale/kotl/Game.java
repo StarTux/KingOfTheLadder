@@ -152,6 +152,7 @@ public final class Game {
         }
         world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
         world.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
+        world.setGameRule(GameRule.PVP, true);
         world.setDifficulty(Difficulty.EASY);
         reduceChunkLock();
     }
