@@ -299,7 +299,7 @@ public final class Game {
         // }
         final long slapCooldown = slapCooldowns.getOrDefault(target.getUniqueId(), 0L);
         final long now = System.currentTimeMillis();
-        if (slapCooldown < now && targetScore > damagerScore + 20) {
+        if (slapCooldown < now) {
             slapCooldowns.put(target.getUniqueId(), now + 1000L);
             final var velo = new Vector(random.nextDouble() * 2.0 - 1.0, random.nextDouble() * 1.0, random.nextDouble() * 2.0 - 1.0);
             target.setVelocity(velo);
