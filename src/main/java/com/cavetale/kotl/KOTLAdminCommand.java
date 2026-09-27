@@ -7,10 +7,10 @@ import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.fam.trophy.Highscore;
 import com.winthier.creative.BuildWorld;
+import com.winthier.kit.Kits;
 import com.winthier.playercache.PlayerCache;
 import java.util.ArrayList;
 import java.util.List;
-import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import static com.cavetale.kotl.Games.games;
@@ -206,8 +206,7 @@ public final class KOTLAdminCommand extends AbstractCommand<KOTLPlugin> {
     private void scoreReward(CommandSender sender) {
         int count = plugin.rewardHighscore();
         sender.sendMessage(text(count + " highscore(s) rewarded", AQUA));
-        for (Component line : Highscore.rewardMoneyWithFeedback(plugin, plugin.getSaveTag().getScore(), "King of the Ladder")) {
-            sender.sendMessage(line);
-        }
+        Highscore.rewardMoneyWithFeedback(sender, plugin, plugin.getSaveTag().getScore(), "King of the Ladder");
+        Kits.autoCreateKit(sender, "king_of_the_ladder", plugin.getSaveTag().getScore().keySet());
     }
 }
